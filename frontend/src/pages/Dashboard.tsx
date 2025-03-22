@@ -57,7 +57,7 @@ export default function Dashboard() {
           }
         );
         setUser(res.data);
-
+        console.log(user);
         // Fetch additional stats
         await fetchStats(res.data._id);
       } catch (err) {
