@@ -46,10 +46,20 @@ const Navigation = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        const token = Cookies.get("token");
+        if (!token) {
+          setIsLoggedIn(false);
+          setUserName("");
+          return;
+        }
+
         const res = await axios.get(
           `${import.meta.env.VITE_BASIC_API_URL}/auth/me`,
           {
             withCredentials: true,
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
         setIsLoggedIn(true);

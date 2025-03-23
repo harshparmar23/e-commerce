@@ -20,6 +20,7 @@ import Wishlist from "./pages/Wishlist";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProducts from "./pages/admin/Products";
 import AdminOrders from "./pages/admin/Orders";
+import Cookies from "js-cookie";
 
 // Admin route guard component
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
@@ -29,10 +30,20 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
+        const token = Cookies.get("token");
+        if (!token) {
+          setIsAdmin(false);
+          setLoading(false);
+          return;
+        }
+
         const res = await axios.get(
           `${import.meta.env.VITE_BASIC_API_URL}/auth/me`,
           {
             withCredentials: true,
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
         setIsAdmin(res.data.role === "admin");
