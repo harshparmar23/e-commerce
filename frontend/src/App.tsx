@@ -11,6 +11,7 @@ import {
 } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import Cookies from "js-cookie";
 import Products from "./pages/Products";
 import Cart from "./pages/Cart";
 import Orders from "./pages/Order";

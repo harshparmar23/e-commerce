@@ -70,8 +70,8 @@ const Cart = () => {
 
   const { settings } = useSettings();
 
-  const leftColumnRef = useRef<HTMLDivElement>(null);
-  const rightColumnRef = useRef<HTMLDivElement>(null);
+  // const leftColumnRef = useRef<HTMLDivElement>(null);
+  // const rightColumnRef = useRef<HTMLDivElement>(null);
   const [columnHeight, setColumnHeight] = useState<number>(0);
 
   useEffect(() => {
@@ -80,6 +80,7 @@ const Cart = () => {
       const headerHeight = 150; // Approximate height of the header
       const availableHeight = viewportHeight - headerHeight - 40; // 40px for padding
       setColumnHeight(availableHeight);
+      console.log(columnHeight);
     };
 
     updateColumnHeight();
