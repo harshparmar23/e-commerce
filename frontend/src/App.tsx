@@ -23,7 +23,7 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProducts from "./pages/admin/Products";
 import AdminOrders from "./pages/admin/Orders";
 import AdminSettings from "./pages/admin/Settings";
-import MaintenancePage from "./pages/MaintenancePage";
+import MaintenancePage from "./pages/Maintenance";
 import { SettingsProvider, useSettings } from "./context/SettingsContext";
 
 // Admin route guard component

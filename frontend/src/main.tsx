@@ -25,7 +25,7 @@ import AdminUsers from "./pages/admin/Users";
 import AdminSettings from "./pages/admin/Settings";
 import AdminCategories from "./pages/admin/Categories";
 import AdminRoute from "./components/admin/AdminRoute";
-import MaintenancePage from "./pages/MaintenancePage";
+import MaintenancePage from "./pages/Maintenance";
 import { SettingsProvider, useSettings } from "./context/SettingsContext";
 
 // MaintenanceWrapper component to handle maintenance mode redirects
@@ -41,8 +41,6 @@ const MaintenanceWrapper = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  // If maintenance mode is on and user is not admin, redirect to maintenance page
-  // Except for login page and maintenance page itself
   if (
     settings.maintenanceMode &&
     !isAdmin &&
