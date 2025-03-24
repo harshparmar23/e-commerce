@@ -20,8 +20,19 @@ router.get("/dashboard", async (req, res) => {
         const totalCategories = await Category.countDocuments()
 
         // Get revenue statistics
-        const orders = await Order.find({ status: { $ne: "cancelled" } })
-        const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0)
+        const totalRevenue = await Order.aggregate([
+            {
+                $match: {
+                    status: { $nin: ["cancelled"] },
+                },
+            },
+            {
+                $group: {
+                    _id: null,
+                    total: { $sum: "$totalAmount" },
+                },
+            },
+        ])
 
         // Get recent orders
         const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(5).populate("userId", "name email")
@@ -43,7 +54,7 @@ router.get("/dashboard", async (req, res) => {
             totalProducts,
             totalOrders,
             totalCategories,
-            totalRevenue,
+            totalRevenue: totalRevenue.length > 0 ? totalRevenue[0].total : 0,
             recentOrders,
             lowStockProducts,
             orderStatusDistribution: {

@@ -15,6 +15,7 @@ import {
   ChevronRight,
   X,
   Edit,
+  Trash2,
 } from "lucide-react";
 import AdminSidebar from "../../components/admin/AdminSidebar";
 
@@ -188,6 +189,46 @@ const AdminOrders = () => {
     } catch (error) {
       console.error("Error updating order:", error);
       setError("Failed to update order. Please try again.");
+    }
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!currentOrder) return;
+
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this order? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await axios.delete(
+        `${import.meta.env.VITE_BASIC_API_URL}/orders/${currentOrder._id}`,
+        {
+          withCredentials: true,
+        }
+      );
+
+      // Close the modal
+      setShowOrderDetails(false);
+      setCurrentOrder(null);
+
+      // Refresh orders list
+      const { data } = await axios.get(
+        `${import.meta.env.VITE_BASIC_API_URL}/admin/orders`,
+        { withCredentials: true }
+      );
+      setOrders(data);
+      setFilteredOrders(data);
+
+      // Show success message
+      setError(null);
+      alert("Order deleted successfully");
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      setError("Failed to delete order. Please try again.");
     }
   };
 
@@ -548,6 +589,12 @@ const AdminOrders = () => {
                   className="text-blue-600 hover:text-blue-800"
                 >
                   <Edit className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={handleDeleteOrder}
+                  className="text-red-600 hover:text-red-800"
+                >
+                  <Trash2 className="h-5 w-5" />
                 </button>
                 <button
                   onClick={() => setShowOrderDetails(false)}

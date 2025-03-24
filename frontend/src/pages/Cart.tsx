@@ -266,6 +266,55 @@ const Cart = () => {
 
     try {
       setIsLoading(true);
+
+      // First, verify stock availability for all items in the cart
+      const stockCheckPromises = cartItems.map(async (item) => {
+        const { data } = await axios.get(
+          `${import.meta.env.VITE_BASIC_API_URL}/products/${item.productId._id}`
+        );
+        return {
+          productId: item.productId._id,
+          name: item.productId.name,
+          requestedQuantity: item.quantity,
+          availableStock: data.stock,
+        };
+      });
+
+      const stockResults = await Promise.all(stockCheckPromises);
+
+      // Check if any items are out of stock
+      const outOfStockItems = stockResults.filter(
+        (item) => item.availableStock < item.requestedQuantity
+      );
+
+      if (outOfStockItems.length > 0) {
+        // Create error message for out of stock items
+        const outOfStockMessages = outOfStockItems.map(
+          (item) =>
+            `"${item.name}" (requested: ${item.requestedQuantity}, available: ${item.availableStock})`
+        );
+
+        setErrorMessage(
+          `Some items are out of stock: ${outOfStockMessages.join(
+            ", "
+          )}. These items have been removed from your cart.`
+        );
+
+        // Remove out of stock items from cart
+        for (const item of outOfStockItems) {
+          await axios.delete(
+            `${import.meta.env.VITE_BASIC_API_URL}/cart/${userId}/${
+              item.productId
+            }`
+          );
+        }
+
+        // Refresh cart
+        fetchCart();
+        setIsLoading(false);
+        return;
+      }
+
       const token = Cookies.get("token");
 
       await axios.post(
@@ -293,9 +342,13 @@ const Cart = () => {
       setTimeout(() => {
         navigate("/orders");
       }, 1500);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error during checkout", error);
-      setErrorMessage("Checkout failed. Please try again.");
+      if (error.response && error.response.data.error) {
+        setErrorMessage(error.response.data.error);
+      } else {
+        setErrorMessage("Checkout failed. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }

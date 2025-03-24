@@ -204,5 +204,43 @@ router.put("/:orderId/cancel", authMiddleware, async (req, res) => {
     }
 })
 
+// Delete an order (admin only)
+router.delete("/:orderId", authMiddleware, async (req, res) => {
+    try {
+        const { orderId } = req.params
+        const userId = req.userId
+        const userRole = req.userRole
+
+        if (!mongoose.Types.ObjectId.isValid(orderId)) {
+            return res.status(400).json({ error: "Invalid order ID" })
+        }
+
+        const order = await Order.findById(orderId)
+
+        if (!order) {
+            return res.status(404).json({ error: "Order not found" })
+        }
+
+        // Ensure only admin or the order owner can delete it
+        if (order.userId.toString() !== userId && userRole !== "admin") {
+            return res.status(403).json({ error: "Unauthorized access to this order" })
+        }
+
+        // Restore product stock for non-delivered orders
+        if (order.status !== "delivered") {
+            for (const item of order.products) {
+                await Product.findByIdAndUpdate(item.productId, { $inc: { stock: item.quantity } })
+            }
+        }
+
+        await Order.findByIdAndDelete(orderId)
+
+        res.json({ message: "Order deleted successfully" })
+    } catch (error) {
+        console.error("Error deleting order:", error)
+        res.status(500).json({ error: "Failed to delete order" })
+    }
+})
+
 export default router
 
