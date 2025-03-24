@@ -72,37 +72,75 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   return isAdmin ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
-// Protected route component that checks for maintenance mode
-// const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-//   const { settings, isAdmin, loading } = useSettings();
-//   const location = useLocation();
+// Protected route component that requires authentication
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const { settings, isAdmin } = useSettings();
+  const location = useLocation();
 
-//   if (loading) {
-//     return (
-//       <div className="flex justify-center items-center min-h-screen">
-//         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-//       </div>
-//     );
-//   }
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = Cookies.get("token");
+        if (!token) {
+          setIsAuthenticated(false);
+          setLoading(false);
+          return;
+        }
 
-//   // If maintenance mode is on and user is not admin, redirect to maintenance page
-//   // Except for login page which should always be accessible
-//   if (
-//     settings.maintenanceMode &&
-//     !isAdmin &&
-//     location.pathname !== "/login" &&
-//     location.pathname !== "/maintenance"
-//   ) {
-//     return <Navigate to="/maintenance" replace />;
-//   }
+        const res = await axios.get(
+          `${import.meta.env.VITE_BASIC_API_URL}/auth/me`,
+          {
+            withCredentials: true,
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
-//   // If user tries to access maintenance page when maintenance mode is off, redirect to home
-//   if (!settings.maintenanceMode && location.pathname === "/maintenance") {
-//     return <Navigate to="/" replace />;
-//   }
+        // Check for token refresh in response headers
+        const newToken = res.headers["new-auth-token"];
+        if (newToken) {
+          Cookies.set("token", newToken, { expires: 7 });
+        }
 
-//   return <>{children}</>;
-// };
+        setIsAuthenticated(true);
+      } catch (err) {
+        setIsAuthenticated(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  // If maintenance mode is on and user is not admin, redirect to maintenance page
+  if (
+    settings.maintenanceMode &&
+    !isAdmin &&
+    location.pathname !== "/login" &&
+    location.pathname !== "/maintenance"
+  ) {
+    return <Navigate to="/maintenance" replace />;
+  }
+
+  // If user tries to access maintenance page when maintenance mode is off, redirect to home
+  if (!settings.maintenanceMode && location.pathname === "/maintenance") {
+    return <Navigate to="/" replace />;
+  }
+
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+};
 
 // Main App component with routes
 const AppRoutes = () => {
@@ -116,8 +154,9 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      {/* Login is always accessible */}
+      {/* Public routes */}
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
 
       {/* Maintenance page */}
       <Route
@@ -131,7 +170,7 @@ const AppRoutes = () => {
         }
       />
 
-      {/* Protected routes */}
+      {/* Products page is public but respects maintenance mode */}
       <Route
         path="/"
         element={
@@ -152,58 +191,42 @@ const AppRoutes = () => {
           )
         }
       />
+
+      {/* Protected routes */}
       <Route
         path="/cart"
         element={
-          shouldShowMaintenance ? (
-            <Navigate to="/maintenance" replace />
-          ) : (
+          <ProtectedRoute>
             <Cart />
-          )
+          </ProtectedRoute>
         }
       />
       <Route
         path="/orders"
         element={
-          shouldShowMaintenance ? (
-            <Navigate to="/maintenance" replace />
-          ) : (
+          <ProtectedRoute>
             <Orders />
-          )
-        }
-      />
-      <Route
-        path="/signup"
-        element={
-          shouldShowMaintenance ? (
-            <Navigate to="/maintenance" replace />
-          ) : (
-            <Signup />
-          )
+          </ProtectedRoute>
         }
       />
       <Route
         path="/dashboard"
         element={
-          shouldShowMaintenance ? (
-            <Navigate to="/maintenance" replace />
-          ) : (
+          <ProtectedRoute>
             <Dashboard />
-          )
+          </ProtectedRoute>
         }
       />
       <Route
         path="/wishlist"
         element={
-          shouldShowMaintenance ? (
-            <Navigate to="/maintenance" replace />
-          ) : (
+          <ProtectedRoute>
             <Wishlist />
-          )
+          </ProtectedRoute>
         }
       />
 
-      {/* Admin Routes - Always accessible to admins */}
+      {/* Admin Routes */}
       <Route
         path="/admin"
         element={

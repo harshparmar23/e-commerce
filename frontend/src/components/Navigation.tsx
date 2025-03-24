@@ -74,6 +74,13 @@ const Navigation = () => {
             },
           }
         );
+
+        // Check for token refresh in response headers
+        const newToken = res.headers["new-auth-token"];
+        if (newToken) {
+          Cookies.set("token", newToken, { expires: 7 });
+        }
+
         setIsLoggedIn(true);
         setUserName(res.data.name);
         fetchCartCount(res.data._id);
@@ -81,16 +88,30 @@ const Navigation = () => {
       } catch (err) {
         setIsLoggedIn(false);
         setUserName("");
+        // If token is invalid, remove it
+        Cookies.remove("token");
+        Cookies.remove("userId");
       }
     };
 
     checkAuth();
+
+    // Set up interval to periodically check auth status (every 5 minutes)
+    const authInterval = setInterval(checkAuth, 5 * 60 * 1000);
+
+    return () => clearInterval(authInterval);
   }, [location.pathname]); // Re-check when route changes
 
   const fetchCartCount = async (userId: string) => {
     try {
+      const token = Cookies.get("token");
       const { data } = await axios.get(
-        `${import.meta.env.VITE_BASIC_API_URL}/cart/${userId}`
+        `${import.meta.env.VITE_BASIC_API_URL}/cart/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
       setCartCount(data.products.length);
     } catch (error) {
@@ -100,8 +121,14 @@ const Navigation = () => {
 
   const fetchWishlistCount = async (userId: string) => {
     try {
+      const token = Cookies.get("token");
       const { data } = await axios.get(
-        `${import.meta.env.VITE_BASIC_API_URL}/wishlist/${userId}`
+        `${import.meta.env.VITE_BASIC_API_URL}/wishlist/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
       setWishlistCount(data.products?.length || 0);
     } catch (error) {
@@ -124,6 +151,11 @@ const Navigation = () => {
       navigate("/login");
     } catch (err) {
       console.error("Logout failed", err);
+      // Even if the server logout fails, remove cookies on client side
+      Cookies.remove("token");
+      Cookies.remove("userId");
+      setIsLoggedIn(false);
+      navigate("/login");
     }
   };
 

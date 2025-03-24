@@ -31,6 +31,20 @@ mongoose
 // Apply maintenance middleware to check for maintenance mode
 app.use(maintenanceMiddleware)
 
+// Add these headers for security
+app.use((req, res, next) => {
+  // Security headers
+  res.setHeader("X-Content-Type-Options", "nosniff")
+  res.setHeader("X-Frame-Options", "DENY")
+  res.setHeader("X-XSS-Protection", "1; mode=block")
+  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+
+  // Allow the frontend to read the new auth token header
+  res.setHeader("Access-Control-Expose-Headers", "New-Auth-Token")
+
+  next()
+})
+
 app.use("/api/auth", authRoutes)
 app.use("/api/products", productRoutes)
 app.use("/api/categories", categoryRoutes)
