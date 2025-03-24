@@ -1,59 +1,45 @@
 "use client";
 
 import type React from "react";
-
 import { useState, useEffect } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
-import {
-  AlertTriangle,
-  Save,
-  RefreshCw,
-  Shield,
-  Database,
-  Globe,
-} from "lucide-react";
-import AdminSidebar from "../../components/admin/AdminSidebar";
+import AdminLayout from "../../layouts/AdminLayout";
+import { useSettings } from "../../context/SettingsContext";
+import { toast } from "react-toastify";
 
-const AdminSettings = () => {
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [user, setUser] = useState<{ name: string; email: string } | null>(
-    null
-  );
-  const navigate = useNavigate();
-
-  // Settings state
-  const [settings, setSettings] = useState({
-    siteName: "ShopApp",
-    siteDescription: "Your one-stop e-commerce solution",
-    contactEmail: "support@shopapp.com",
-    enableRegistration: true,
+const AdminSettings: React.FC = () => {
+  const { settings, updateSettings, refreshSettings } = useSettings();
+  const [formData, setFormData] = useState({
+    siteName: "",
+    siteDescription: "",
+    contactEmail: "",
+    enableRegistration: false,
     enableGuestCheckout: false,
     maintenanceMode: false,
-    defaultCurrency: "INR",
-    taxRate: 18,
+    maintenanceMessage: "",
+    defaultCurrency: "",
+    currencySymbol: "",
     shippingFee: 0,
-    freeShippingThreshold: 1000,
+    freeShippingThreshold: 0,
   });
+  const [showMaintenanceConfirm, setShowMaintenanceConfirm] = useState(false);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const { data } = await axios.get(
-          `${import.meta.env.VITE_BASIC_API_URL}/auth/me`,
-          { withCredentials: true }
-        );
-        setUser(data);
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-        navigate("/login");
-      }
-    };
-
-    fetchUserData();
-  }, [navigate]);
+    if (settings) {
+      setFormData({
+        siteName: settings.siteName || "",
+        siteDescription: settings.siteDescription || "",
+        contactEmail: settings.contactEmail || "",
+        enableRegistration: settings.enableRegistration || false,
+        enableGuestCheckout: settings.enableGuestCheckout || false,
+        maintenanceMode: settings.maintenanceMode || false,
+        maintenanceMessage: settings.maintenanceMessage || "",
+        defaultCurrency: settings.defaultCurrency || "",
+        currencySymbol: settings.currencySymbol || "",
+        shippingFee: settings.shippingFee || 0,
+        freeShippingThreshold: settings.freeShippingThreshold || 0,
+      });
+    }
+  }, [settings]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -62,295 +48,368 @@ const AdminSettings = () => {
   ) => {
     const { name, value, type } = e.target;
 
-    if (type === "checkbox") {
-      const target = e.target as HTMLInputElement;
-      setSettings({
-        ...settings,
-        [name]: target.checked,
-      });
-    } else if (type === "number") {
-      setSettings({
-        ...settings,
-        [name]: Number.parseFloat(value),
-      });
-    } else {
-      setSettings({
-        ...settings,
-        [name]: value,
-      });
-    }
-  };
-
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    setSettings({
-      ...settings,
-      [name]: checked,
+    setFormData({
+      ...formData,
+      [name]:
+        type === "checkbox"
+          ? (e.target as HTMLInputElement).checked
+          : type === "number"
+          ? Number.parseFloat(value)
+          : value,
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
+  const handleMaintenanceToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.checked;
 
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      setSuccess("Settings updated successfully");
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (error) {
-      console.error("Error updating settings:", error);
-      setError("Failed to update settings. Please try again.");
-    } finally {
-      setLoading(false);
+    if (newValue === true) {
+      // If turning maintenance mode ON, show confirmation dialog
+      setShowMaintenanceConfirm(true);
+    } else {
+      // If turning maintenance mode OFF, update immediately
+      handleSaveSettings({ ...formData, maintenanceMode: false });
     }
   };
 
-  return (
-    <div className="flex min-h-screen bg-gray-100">
-      <AdminSidebar />
-      <div className="flex-1 md:ml-20 lg:ml-64">
-        {/* Admin Header */}
-        <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 sticky top-0 z-10">
-          <h1 className="text-xl font-semibold text-gray-800">Settings</h1>
+  const confirmMaintenanceMode = () => {
+    handleSaveSettings({ ...formData, maintenanceMode: true });
+    setShowMaintenanceConfirm(false);
+  };
 
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <div className="bg-blue-600 text-white rounded-full h-8 w-8 flex items-center justify-center">
-                {user?.name?.charAt(0).toUpperCase() || "A"}
+  const cancelMaintenanceMode = () => {
+    setFormData({ ...formData, maintenanceMode: false });
+    setShowMaintenanceConfirm(false);
+  };
+
+  const handleSaveSettings = async (data: typeof formData) => {
+    try {
+      await updateSettings(data);
+      await refreshSettings();
+      toast.success("Settings updated successfully");
+    } catch (error) {
+      toast.error("Failed to update settings");
+      console.error(error);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSaveSettings(formData);
+  };
+
+  return (
+    <AdminLayout title="Admin Settings">
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold mb-6">Site Settings</h1>
+
+        {settings.maintenanceMode && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg
+                  className="h-5 w-5 text-yellow-400"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
               </div>
-              <span className="hidden md:inline text-sm font-medium">
-                {user?.name || "Admin User"}
-              </span>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-yellow-800">
+                  Maintenance Mode Active
+                </h3>
+                <div className="mt-2 text-sm text-yellow-700">
+                  <p>
+                    Your site is currently in maintenance mode. Only
+                    administrators can access the site.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-        </header>
+        )}
 
-        <div className="p-6">
-          {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-md">
-              <div className="flex items-center">
-                <AlertTriangle className="h-6 w-6 text-red-500 mr-3" />
-                <p className="text-red-700">{error}</p>
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white shadow-md rounded-lg p-6"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h2 className="text-lg font-semibold mb-4 border-b pb-2">
+                General Settings
+              </h2>
+
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 text-sm font-bold mb-2"
+                  htmlFor="siteName"
+                >
+                  Site Name
+                </label>
+                <input
+                  type="text"
+                  id="siteName"
+                  name="siteName"
+                  value={formData.siteName}
+                  onChange={handleChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 text-sm font-bold mb-2"
+                  htmlFor="siteDescription"
+                >
+                  Site Description
+                </label>
+                <textarea
+                  id="siteDescription"
+                  name="siteDescription"
+                  value={formData.siteDescription}
+                  onChange={handleChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  rows={3}
+                />
+              </div>
+
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 text-sm font-bold mb-2"
+                  htmlFor="contactEmail"
+                >
+                  Contact Email
+                </label>
+                <input
+                  type="email"
+                  id="contactEmail"
+                  name="contactEmail"
+                  value={formData.contactEmail}
+                  onChange={handleChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                />
               </div>
             </div>
-          )}
 
-          {success && (
-            <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-md">
-              <div className="flex items-center">
-                <Save className="h-6 w-6 text-green-500 mr-3" />
-                <p className="text-green-700">{success}</p>
+            <div>
+              <h2 className="text-lg font-semibold mb-4 border-b pb-2">
+                E-commerce Settings
+              </h2>
+
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 text-sm font-bold mb-2"
+                  htmlFor="defaultCurrency"
+                >
+                  Default Currency
+                </label>
+                <select
+                  id="defaultCurrency"
+                  name="defaultCurrency"
+                  value={formData.defaultCurrency}
+                  onChange={handleChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                >
+                  <option value="INR">Indian Rupee (INR)</option>
+                  <option value="USD">US Dollar (USD)</option>
+                  <option value="EUR">Euro (EUR)</option>
+                  <option value="GBP">British Pound (GBP)</option>
+                </select>
+              </div>
+
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 text-sm font-bold mb-2"
+                  htmlFor="currencySymbol"
+                >
+                  Currency Symbol
+                </label>
+                <input
+                  type="text"
+                  id="currencySymbol"
+                  name="currencySymbol"
+                  value={formData.currencySymbol}
+                  onChange={handleChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  maxLength={3}
+                />
+              </div>
+
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 text-sm font-bold mb-2"
+                  htmlFor="shippingFee"
+                >
+                  Shipping Fee
+                </label>
+                <input
+                  type="number"
+                  id="shippingFee"
+                  name="shippingFee"
+                  value={formData.shippingFee}
+                  onChange={handleChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  min={0}
+                  step={0.01}
+                />
+              </div>
+
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 text-sm font-bold mb-2"
+                  htmlFor="freeShippingThreshold"
+                >
+                  Free Shipping Threshold
+                </label>
+                <input
+                  type="number"
+                  id="freeShippingThreshold"
+                  name="freeShippingThreshold"
+                  value={formData.freeShippingThreshold}
+                  onChange={handleChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  min={0}
+                  step={0.01}
+                />
               </div>
             </div>
-          )}
+          </div>
 
-          <form onSubmit={handleSubmit}>
-            <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-lg font-semibold flex items-center">
-                  <Globe className="mr-2 h-5 w-5 text-blue-600" />
-                  General Settings
-                </h2>
-              </div>
-              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Site Name
-                  </label>
+          <div className="mt-6 border-t pt-6">
+            <h2 className="text-lg font-semibold mb-4">Site Access Settings</h2>
+
+            <div className="flex flex-wrap -mx-2">
+              <div className="px-2 w-full md:w-1/2 mb-4">
+                <div className="flex items-center">
                   <input
-                    type="text"
-                    name="siteName"
-                    value={settings.siteName}
+                    type="checkbox"
+                    id="enableRegistration"
+                    name="enableRegistration"
+                    checked={formData.enableRegistration}
                     onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Contact Email
-                  </label>
-                  <input
-                    type="email"
-                    name="contactEmail"
-                    value={settings.contactEmail}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Site Description
-                  </label>
-                  <textarea
-                    name="siteDescription"
-                    value={settings.siteDescription}
-                    onChange={handleChange}
-                    rows={3}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  ></textarea>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Default Currency
-                  </label>
-                  <select
-                    name="defaultCurrency"
-                    value={settings.defaultCurrency}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  <label
+                    className="ml-2 block text-gray-700"
+                    htmlFor="enableRegistration"
                   >
-                    <option value="INR">Indian Rupee (₹)</option>
-                    <option value="USD">US Dollar ($)</option>
-                    <option value="EUR">Euro (€)</option>
-                    <option value="GBP">British Pound (£)</option>
-                  </select>
-                </div>
-                <div>
-                  <div className="flex items-center h-full">
-                    <label className="flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="maintenanceMode"
-                        checked={settings.maintenanceMode}
-                        onChange={handleCheckboxChange}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <span className="ml-2 text-sm text-gray-900">
-                        Enable Maintenance Mode
-                      </span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-lg font-semibold flex items-center">
-                  <Shield className="mr-2 h-5 w-5 text-blue-600" />
-                  Security Settings
-                </h2>
-              </div>
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      name="enableRegistration"
-                      checked={settings.enableRegistration}
-                      onChange={handleCheckboxChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <span className="ml-2 text-sm text-gray-900">
-                      Allow New User Registrations
-                    </span>
+                    Enable User Registration
                   </label>
                 </div>
-                <div>
-                  <label className="flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      name="enableGuestCheckout"
-                      checked={settings.enableGuestCheckout}
-                      onChange={handleCheckboxChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <span className="ml-2 text-sm text-gray-900">
-                      Allow Guest Checkout
-                    </span>
+              </div>
+
+              <div className="px-2 w-full md:w-1/2 mb-4">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="enableGuestCheckout"
+                    name="enableGuestCheckout"
+                    checked={formData.enableGuestCheckout}
+                    onChange={handleChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label
+                    className="ml-2 block text-gray-700"
+                    htmlFor="enableGuestCheckout"
+                  >
+                    Enable Guest Checkout
                   </label>
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-lg font-semibold flex items-center">
-                  <Database className="mr-2 h-5 w-5 text-blue-600" />
-                  E-commerce Settings
-                </h2>
+          <div className="mt-6 border-t pt-6">
+            <h2 className="text-lg font-semibold mb-4">Maintenance Mode</h2>
+
+            <div className="mb-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="maintenanceMode"
+                  name="maintenanceMode"
+                  checked={formData.maintenanceMode}
+                  onChange={handleMaintenanceToggle}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label
+                  className="ml-2 block text-gray-700 font-medium"
+                  htmlFor="maintenanceMode"
+                >
+                  Enable Maintenance Mode
+                </label>
               </div>
-              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tax Rate (%)
-                  </label>
-                  <input
-                    type="number"
-                    name="taxRate"
-                    value={settings.taxRate}
-                    onChange={handleChange}
-                    min="0"
-                    step="0.01"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Shipping Fee (₹)
-                  </label>
-                  <input
-                    type="number"
-                    name="shippingFee"
-                    value={settings.shippingFee}
-                    onChange={handleChange}
-                    min="0"
-                    step="0.01"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Free Shipping Threshold (₹)
-                  </label>
-                  <input
-                    type="number"
-                    name="freeShippingThreshold"
-                    value={settings.freeShippingThreshold}
-                    onChange={handleChange}
-                    min="0"
-                    step="0.01"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
+              <p className="text-sm text-gray-500 mt-1 ml-6">
+                When enabled, only administrators can access the site. All other
+                users will see the maintenance page.
+              </p>
             </div>
 
-            <div className="flex justify-end">
-              <button
-                type="button"
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 mr-3"
-                onClick={() => window.location.reload()}
+            <div className="mb-4">
+              <label
+                className="block text-gray-700 text-sm font-bold mb-2"
+                htmlFor="maintenanceMessage"
               >
-                <RefreshCw className="h-4 w-4 inline-block mr-1" />
-                Reset
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-1" />
-                    Save Settings
-                  </>
-                )}
-              </button>
+                Maintenance Message
+              </label>
+              <textarea
+                id="maintenanceMessage"
+                name="maintenanceMessage"
+                value={formData.maintenanceMessage}
+                onChange={handleChange}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                rows={3}
+                placeholder="Enter a message to display during maintenance mode"
+              />
             </div>
-          </form>
-        </div>
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <button
+              type="submit"
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            >
+              Save Settings
+            </button>
+          </div>
+        </form>
+
+        {/* Maintenance Mode Confirmation Dialog */}
+        {showMaintenanceConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <h3 className="text-lg font-bold mb-4">
+                Enable Maintenance Mode?
+              </h3>
+              <p className="mb-6 text-gray-600">
+                Enabling maintenance mode will prevent all non-admin users from
+                accessing your site. They will be redirected to the maintenance
+                page. Are you sure you want to continue?
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={cancelMaintenanceMode}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmMaintenanceMode}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                >
+                  Enable Maintenance Mode
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 

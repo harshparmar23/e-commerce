@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken"
 import User from "../models/User.js"
 import authMiddleware from "../middleware/authMiddleware.js"
 import dotenv from "dotenv"
+import Settings from "../models/Settings.js" // Import Settings model
 dotenv.config()
 
 const router = express.Router()
@@ -12,6 +13,12 @@ const JWT_SECRET = process.env.JWT_SECRET
 // Signup Route
 router.post("/signup", async (req, res) => {
     try {
+        // First check if registration is enabled in settings
+        const settings = await Settings.getSingleton()
+        if (!settings.enableRegistration) {
+            return res.status(403).json({ message: "Registration is currently disabled" })
+        }
+
         const { name, email, password } = req.body
 
         const existingUser = await User.findOne({ email })
@@ -45,7 +52,7 @@ router.post("/login", async (req, res) => {
         res.cookie("token", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
+            sameSite: "None",
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
             domain: process.env.NODE_ENV === "production" ? ".vercel.app" : "localhost",
         })

@@ -4,6 +4,7 @@ import Order from "../models/Order.js"
 import Cart from "../models/Cart.js"
 import User from "../models/User.js"
 import Product from "../models/Product.js"
+import Settings from "../models/Settings.js"
 import authMiddleware from "../middleware/authMiddleware.js"
 
 const router = express.Router()
@@ -34,9 +35,12 @@ router.post("/", authMiddleware, async (req, res) => {
             return res.status(404).json({ error: "Selected address not found" })
         }
 
+        // Get site settings for shipping calculation
+        const settings = await Settings.getSingleton()
+
         // Check product stock and calculate total amount
         const orderProducts = []
-        let totalAmount = 0
+        let subtotal = 0
 
         for (const item of cart.products) {
             const product = await Product.findById(item.productId._id)
@@ -61,8 +65,17 @@ router.post("/", authMiddleware, async (req, res) => {
                 price: product.price,
             })
 
-            totalAmount += product.price * item.quantity
+            subtotal += product.price * item.quantity
         }
+
+        // Calculate shipping fee based on free shipping threshold
+        let shippingFee = 0
+        if (subtotal < settings.freeShippingThreshold) {
+            shippingFee = settings.shippingFee
+        }
+
+        // Calculate total amount including shipping
+        const totalAmount = subtotal + shippingFee
 
         // Create new order
         const newOrder = new Order({
@@ -75,6 +88,8 @@ router.post("/", authMiddleware, async (req, res) => {
                 country: selectedAddress.country,
                 zipCode: selectedAddress.zipCode,
             },
+            subtotal,
+            shippingFee,
             totalAmount,
             isGift: isGift || false,
             giftMessage: giftMessage || "",

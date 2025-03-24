@@ -26,7 +26,26 @@ const AuthForm = ({ type }: { type: "login" | "signup" }) => {
     formState: { errors },
   } = useForm();
 
+  // Add a check at the beginning of the onSubmit function to verify registration is enabled
   const onSubmit = async (data: any) => {
+    // For signup, check if registration is enabled in settings
+    if (type === "signup") {
+      try {
+        // First check if registration is enabled
+        const settingsRes = await axios.get(
+          `${import.meta.env.VITE_BASIC_API_URL}/settings`
+        );
+
+        if (!settingsRes.data.enableRegistration) {
+          toast.error("Registration is currently disabled");
+          navigate("/login");
+          return;
+        }
+      } catch (err) {
+        console.error("Error checking registration settings:", err);
+      }
+    }
+
     setLoading(true);
     try {
       const endpoint = type === "login" ? "/auth/login" : "/auth/signup";

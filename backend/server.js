@@ -13,6 +13,8 @@ import orderRoutes from "./routes/orderRoutes.js"
 import wishlistRoutes from "./routes/wishlistRoutes.js"
 import ratingRoutes from "./routes/ratingRoutes.js"
 import adminRoutes from "./routes/adminRoutes.js"
+import settingsRoutes from "./routes/settingsRoutes.js"
+import maintenanceMiddleware from "./middleware/maintenanceMiddleware.js"
 
 dotenv.config()
 
@@ -26,6 +28,9 @@ mongoose
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.error("MongoDB Connection Failed", err))
 
+// Apply maintenance middleware to check for maintenance mode
+app.use(maintenanceMiddleware)
+
 app.use("/api/auth", authRoutes)
 app.use("/api/products", productRoutes)
 app.use("/api/categories", categoryRoutes)
@@ -36,6 +41,7 @@ app.use("/api/orders", orderRoutes)
 app.use("/api/wishlist", wishlistRoutes)
 app.use("/api/ratings", ratingRoutes)
 app.use("/api/admin", adminRoutes) // Add admin routes
+app.use("/api/settings", settingsRoutes) // Add settings routes
 
 app.listen(5000, () => console.log("Server running on port 5000"))
 

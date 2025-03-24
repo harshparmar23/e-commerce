@@ -15,6 +15,7 @@ import {
   Check,
 } from "lucide-react";
 import Cookies from "js-cookie";
+import { useSettings } from "../context/SettingsContext";
 
 interface Product {
   _id: string;
@@ -66,6 +67,8 @@ const Cart = () => {
     country: "",
     zipCode: "",
   });
+
+  const { settings } = useSettings();
 
   const leftColumnRef = useRef<HTMLDivElement>(null);
   const rightColumnRef = useRef<HTMLDivElement>(null);
@@ -290,10 +293,17 @@ const Cart = () => {
     }
   };
 
-  const totalCost = cartItems.reduce(
+  const subtotal = cartItems.reduce(
     (acc, { productId, quantity }) => acc + productId.price * quantity,
     0
   );
+
+  // Calculate shipping fee based on free shipping threshold
+  const shippingFee =
+    subtotal < settings.freeShippingThreshold ? settings.shippingFee : 0;
+
+  // Calculate total cost including shipping
+  const totalCost = subtotal + shippingFee;
 
   if (!user)
     return (
@@ -378,7 +388,8 @@ const Cart = () => {
                           {productId.name}
                         </h3>
                         <p className="text-gray-600 mb-4">
-                          ₹{productId.price.toFixed(2)}
+                          {settings.currencySymbol}
+                          {productId.price.toFixed(2)}
                         </p>
 
                         <div className="flex items-center justify-between">
@@ -405,7 +416,8 @@ const Cart = () => {
                           </div>
                           <div className="flex items-center">
                             <p className="font-semibold mr-4">
-                              ₹{(productId.price * quantity).toFixed(2)}
+                              {settings.currencySymbol}
+                              {(productId.price * quantity).toFixed(2)}
                             </p>
                             <button
                               className="text-red-500 hover:text-red-700"
@@ -455,17 +467,35 @@ const Cart = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Subtotal</span>
                       <span className="font-medium">
-                        ₹{totalCost.toFixed(2)}
+                        {settings.currencySymbol}
+                        {subtotal.toFixed(2)}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Shipping</span>
-                      <span className="font-medium">Free</span>
+                      {shippingFee > 0 ? (
+                        <span className="font-medium">
+                          {settings.currencySymbol}
+                          {shippingFee.toFixed(2)}
+                        </span>
+                      ) : (
+                        <span className="font-medium text-green-600">Free</span>
+                      )}
                     </div>
+                    {shippingFee > 0 && (
+                      <div className="text-xs text-gray-500 italic">
+                        Add {settings.currencySymbol}
+                        {(settings.freeShippingThreshold - subtotal).toFixed(
+                          2
+                        )}{" "}
+                        more to qualify for free shipping
+                      </div>
+                    )}
                     <div className="border-t pt-4 flex justify-between">
                       <span className="font-semibold">Total</span>
                       <span className="font-bold text-lg">
-                        ₹{totalCost.toFixed(2)}
+                        {settings.currencySymbol}
+                        {totalCost.toFixed(2)}
                       </span>
                     </div>
                   </div>

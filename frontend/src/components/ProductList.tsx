@@ -12,6 +12,7 @@ import {
   Check,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useSettings } from "../context/SettingsContext";
 
 interface Product {
   _id: string;
@@ -54,6 +55,7 @@ export default function ProductList({
     type: "success" | "error";
   } | null>(null);
   const navigate = useNavigate();
+  const { settings } = useSettings();
 
   // Check if user is logged in
   useEffect(() => {
@@ -415,7 +417,8 @@ export default function ProductList({
 
               <div className="mt-auto">
                 <p className="text-lg font-bold text-gray-900 mb-1">
-                  ₹{product.price.toLocaleString()}
+                  {settings.currencySymbol}
+                  {product.price.toLocaleString()}
                 </p>
                 <p
                   className={`text-xs font-medium mb-2 ${

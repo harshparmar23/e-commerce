@@ -1,6 +1,12 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import "./index.css";
@@ -19,10 +25,45 @@ import AdminUsers from "./pages/admin/Users";
 import AdminSettings from "./pages/admin/Settings";
 import AdminCategories from "./pages/admin/Categories";
 import AdminRoute from "./components/admin/AdminRoute";
+import MaintenancePage from "./pages/MaintenancePage";
+import { SettingsProvider, useSettings } from "./context/SettingsContext";
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <BrowserRouter>
+// MaintenanceWrapper component to handle maintenance mode redirects
+const MaintenanceWrapper = ({ children }: { children: React.ReactNode }) => {
+  const { settings, isAdmin, loading } = useSettings();
+  const location = useLocation();
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  // If maintenance mode is on and user is not admin, redirect to maintenance page
+  // Except for login page and maintenance page itself
+  if (
+    settings.maintenanceMode &&
+    !isAdmin &&
+    location.pathname !== "/login" &&
+    location.pathname !== "/maintenance"
+  ) {
+    return <Navigate to="/maintenance" replace />;
+  }
+
+  // If maintenance mode is off and user is trying to access maintenance page, redirect to home
+  if (!settings.maintenanceMode && location.pathname === "/maintenance") {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+// AppRoutes component with all routes
+const AppRoutes = () => {
+  return (
+    <MaintenanceWrapper>
       <Navigation />
       <Routes>
         <Route path="/" element={<Navigate to="/products" replace />} />
@@ -33,6 +74,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <Route path="/cart" element={<Cart />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/maintenance" element={<MaintenancePage />} />
+
         {/* Admin Routes */}
         <Route
           path="/admin"
@@ -83,7 +126,24 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           }
         />
       </Routes>
+    </MaintenanceWrapper>
+  );
+};
+
+// App component
+const App = () => {
+  return (
+    <BrowserRouter>
+      <SettingsProvider>
+        <AppRoutes />
+        <ToastContainer position="top-right" autoClose={3000} />
+      </SettingsProvider>
     </BrowserRouter>
-    <ToastContainer position="top-right" autoClose={3000} />
+  );
+};
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <App />
   </React.StrictMode>
 );
