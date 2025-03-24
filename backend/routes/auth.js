@@ -49,24 +49,19 @@ router.post("/login", async (req, res) => {
         const token = jwt.sign({ userId: user._id, role: user.role }, JWT_SECRET, { expiresIn: "7d" })
         console.log("Token generated for user:", user._id)
 
-        // Set token in HTTP-only cookie
         res.cookie("token", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
+            sameSite: "None",
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            domain: process.env.NODE_ENV === "production" ? ".vercel.app" : "localhost",
         })
 
-        // Also return token in response for clients that need it
-        res.status(200).json({
-            success: true,
-            token,
-            user: {
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-            },
+        res.json({
+            message: "Login successful",
+            userId: user._id,
+            role: user.role,
+            token: token, // Send token in response for client-side storage
         })
     } catch (error) {
         console.log(error)
@@ -85,27 +80,6 @@ router.get("/me", authMiddleware, async (req, res) => {
     try {
         const user = await User.findById(req.userId).select("-password") // Exclude password
         if (!user) return res.status(404).json({ message: "User not found" })
-
-        // Check if token is about to expire (if it expires in less than 1 day)
-        const decoded = req.user // Assuming your auth middleware adds the decoded token to req.user
-        const currentTime = Math.floor(Date.now() / 1000)
-        if (decoded.exp - currentTime < 86400) {
-            // Create a new token with extended expiration
-            const newToken = jwt.sign({ userId: decoded.userId, role: decoded.role }, process.env.JWT_SECRET, {
-                expiresIn: "7d",
-            })
-
-            // Set the new token in the response
-            res.cookie("token", newToken, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === "production",
-                sameSite: "strict",
-                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-            })
-
-            // Also set in header for API clients
-            res.setHeader("New-Auth-Token", newToken)
-        }
 
         res.json(user)
     } catch (error) {
