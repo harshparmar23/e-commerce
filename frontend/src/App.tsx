@@ -33,10 +33,20 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
+        const token = Cookies.get("token");
+        if (!token) {
+          setIsAdmin(false);
+          setLoading(false);
+          return;
+        }
+
         const res = await axios.get(
           `${import.meta.env.VITE_BASIC_API_URL}/auth/me`,
           {
             withCredentials: true,
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
         setIsAdmin(res.data.role === "admin");

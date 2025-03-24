@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
@@ -93,9 +93,20 @@ const Cart = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
+        const token = Cookies.get("token");
+        if (!token) {
+          navigate("/login");
+          return;
+        }
+
         const res = await axios.get(
           `${import.meta.env.VITE_BASIC_API_URL}/auth/me`,
-          { withCredentials: true }
+          {
+            withCredentials: true,
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
         );
         setUser(res.data);
         setUserId(res.data._id);
@@ -202,13 +213,6 @@ const Cart = () => {
       // Get token from cookies
       const token = Cookies.get("token");
 
-      console.log(
-        "Sending address request with token:",
-        token ? "Token exists" : "No token"
-      );
-      console.log("User ID:", userId);
-      console.log("Address data:", newAddress);
-
       const { data } = await axios.post(
         `${import.meta.env.VITE_BASIC_API_URL}/users/${userId}/address`,
         newAddress,
@@ -220,8 +224,6 @@ const Cart = () => {
           },
         }
       );
-
-      console.log("Address added successfully:", data);
 
       // Update user state with new address
       setUser((prev) =>
@@ -244,8 +246,6 @@ const Cart = () => {
     } catch (error: any) {
       console.error("Error adding address", error);
       if (error.response) {
-        console.error("Error status:", error.response.status);
-        console.error("Error data:", error.response.data);
         setErrorMessage(
           `Failed to add address: ${error.response.data.error || error.message}`
         );
@@ -265,6 +265,8 @@ const Cart = () => {
 
     try {
       setIsLoading(true);
+      const token = Cookies.get("token");
+
       await axios.post(
         `${import.meta.env.VITE_BASIC_API_URL}/orders`,
         {
@@ -273,7 +275,12 @@ const Cart = () => {
           giftMessage: isGift ? giftMessage : "",
           paymentMethod,
         },
-        { withCredentials: true }
+        {
+          withCredentials: true,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
 
       setSuccessMessage("Order placed successfully!");
@@ -313,8 +320,8 @@ const Cart = () => {
     );
 
   return (
-    <div className="bg-gray-50 min-h-screen pt-20 px-8">
-      <div className="container mx-auto px-4 py-8">
+    <div className="bg-gray-50 min-h-screen">
+      <div className="pt-24 px-4 sm:px-6 lg:px-8 pb-8 max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold mb-2 text-gray-800 flex items-center">
           <ShoppingBag className="mr-2" /> Your Shopping Cart
         </h1>
@@ -336,7 +343,7 @@ const Cart = () => {
           </div>
         )}
 
-        {isLoading ? (
+        {isLoading && cartItems.length === 0 ? (
           <div className="flex justify-center items-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
@@ -358,19 +365,15 @@ const Cart = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Cart Items - with independent scrolling */}
-            <div
-              ref={leftColumnRef}
-              className="lg:col-span-2"
-              style={{ height: `${columnHeight}px` }}
-            >
-              <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6 h-full flex flex-col">
-                <div className="p-6 border-b sticky top-0 bg-white z-10">
+            {/* Cart Items */}
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+                <div className="p-6 border-b">
                   <h2 className="text-xl font-semibold">
                     Cart Items ({cartItems.length})
                   </h2>
                 </div>
-                <div className="divide-y overflow-y-auto flex-grow">
+                <div className="divide-y max-h-[calc(100vh-300px)] overflow-y-auto">
                   {cartItems.map(({ productId, quantity }) => (
                     <div
                       key={productId._id}
@@ -431,7 +434,7 @@ const Cart = () => {
                     </div>
                   ))}
                 </div>
-                <div className="p-6 bg-gray-50 flex justify-between items-center sticky bottom-0">
+                <div className="p-6 bg-gray-50 flex justify-between items-center">
                   <button
                     className="text-red-500 hover:text-red-700 flex items-center"
                     onClick={clearCart}
@@ -449,17 +452,11 @@ const Cart = () => {
               </div>
             </div>
 
-            {/* Order Summary - with independent scrolling */}
-            <div
-              ref={rightColumnRef}
-              className="lg:col-span-1"
-              style={{ height: `${columnHeight}px` }}
-            >
-              <div
-                className="overflow-y-auto pr-2"
-                style={{ maxHeight: "100%" }}
-              >
-                <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+            {/* Order Summary */}
+            <div className="lg:col-span-1">
+              <div className="space-y-6">
+                {/* Order Summary Card */}
+                <div className="bg-white rounded-lg shadow-md overflow-hidden">
                   <div className="p-6 border-b">
                     <h2 className="text-xl font-semibold">Order Summary</h2>
                   </div>
@@ -502,7 +499,7 @@ const Cart = () => {
                 </div>
 
                 {/* Shipping Address */}
-                <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+                <div className="bg-white rounded-lg shadow-md overflow-hidden">
                   <div className="p-6 border-b flex justify-between items-center">
                     <h2 className="text-xl font-semibold flex items-center">
                       <MapPin className="mr-2" size={20} />
@@ -563,7 +560,7 @@ const Cart = () => {
                 </div>
 
                 {/* Gift Option */}
-                <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+                <div className="bg-white rounded-lg shadow-md overflow-hidden">
                   <div className="p-6 border-b">
                     <h2 className="text-xl font-semibold flex items-center">
                       <Gift className="mr-2" size={20} />
@@ -601,7 +598,7 @@ const Cart = () => {
                 </div>
 
                 {/* Payment Method */}
-                <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
+                <div className="bg-white rounded-lg shadow-md overflow-hidden">
                   <div className="p-6 border-b">
                     <h2 className="text-xl font-semibold">Payment Method</h2>
                   </div>
