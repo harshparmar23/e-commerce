@@ -1,7 +1,6 @@
 import type React from "react";
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import AdminLayout from "@/layouts/AdminLayout";
 import Pagination from "@/components/admin/Pagination";
@@ -38,8 +37,6 @@ const Coupons = () => {
     active: true,
     expiryDate: new Date().toISOString().split("T")[0],
   });
-
-  const navigate = useNavigate();
   const itemsPerPage = 10;
 
   useEffect(() => {
