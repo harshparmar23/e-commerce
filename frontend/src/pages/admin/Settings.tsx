@@ -1,9 +1,7 @@
-"use client";
-
 import type React from "react";
 import { useState, useEffect } from "react";
-import AdminLayout from "../../layouts/AdminLayout";
-import { useSettings } from "../../context/SettingsContext";
+import AdminLayout from "@/layouts/AdminLayout";
+import { useSettings } from "@/context/SettingsContext";
 import { toast } from "react-toastify";
 
 const AdminSettings: React.FC = () => {
@@ -215,10 +213,10 @@ const AdminSettings: React.FC = () => {
                   onChange={handleChange}
                   className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                 >
-                  <option value="INR">Indian Rupee (INR)</option>
-                  <option value="USD">US Dollar (USD)</option>
-                  <option value="EUR">Euro (EUR)</option>
-                  <option value="GBP">British Pound (GBP)</option>
+                  <option value="INR">INR</option>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="GBP">GBP</option>
                 </select>
               </div>
 

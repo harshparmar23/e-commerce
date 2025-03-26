@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -15,6 +13,7 @@ import {
   ChevronRight,
   Menu,
   X,
+  Ticket,
 } from "lucide-react";
 import axios from "axios";
 import Cookies from "js-cookie";
@@ -238,6 +237,22 @@ const AdminSidebar = () => {
                   </li>
                 </ul>
               ) : null}
+            </li>
+
+            <li>
+              <Link
+                to="/admin/coupons"
+                className={`flex items-center ${
+                  expanded ? "px-4" : "justify-center px-2"
+                } py-2 rounded-md ${
+                  isActive("/admin/coupons")
+                    ? "bg-blue-50 text-blue-700"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <Ticket className="h-5 w-5 min-w-[20px]" />
+                {expanded && <span className="ml-2">Coupons</span>}
+              </Link>
             </li>
 
             <li>

@@ -1,5 +1,3 @@
-"use client";
-
 import type React from "react";
 
 import {
@@ -25,6 +23,9 @@ import AdminOrders from "./pages/admin/Orders";
 import AdminSettings from "./pages/admin/Settings";
 import MaintenancePage from "./pages/Maintenance";
 import { SettingsProvider, useSettings } from "./context/SettingsContext";
+// Add the import for ProfileSettings
+import ProfileSettings from "./pages/ProfileSettings";
+import Coupons from "./pages/admin/Coupons";
 
 // Admin route guard component
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
@@ -225,6 +226,15 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      {/* Add this inside the Routes component, with the other protected routes */}
+      <Route
+        path="/profile-settings"
+        element={
+          <ProtectedRoute>
+            <ProfileSettings />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Admin Routes */}
       <Route
@@ -256,6 +266,14 @@ const AppRoutes = () => {
         element={
           <AdminRoute>
             <AdminSettings />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/coupons"
+        element={
+          <AdminRoute>
+            <Coupons />
           </AdminRoute>
         }
       />

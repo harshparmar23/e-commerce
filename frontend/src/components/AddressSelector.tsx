@@ -1,5 +1,4 @@
 // Create a new component for address selection
-"use client";
 
 import { Plus } from "lucide-react";
 

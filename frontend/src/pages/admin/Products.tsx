@@ -1,15 +1,13 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { Plus, AlertTriangle } from "lucide-react";
-import ProductTable from "../../components/admin/ProductTable";
-import ProductFilters from "../../components/admin/ProductFilters";
-import Pagination from "../../components/admin/Pagination";
-import AddProductModal from "../../components/admin/AddProductModal";
-import EditProductModal from "../../components/admin/EditProductModal";
-import DeleteConfirmationModal from "../../components/admin/DeleteConfirmationModal";
-import AdminLayout from "../../layouts/AdminLayout";
+import ProductTable from "@/components/admin/ProductTable";
+import ProductFilters from "@/components/admin/ProductFilters";
+import Pagination from "@/components/admin/Pagination";
+import AddProductModal from "@/components/admin/AddProductModal";
+import EditProductModal from "@/components/admin/EditProductModal";
+import DeleteConfirmationModal from "@/components/admin/DeleteConfirmationModal";
+import AdminLayout from "@/layouts/AdminLayout";
 
 interface Product {
   _id: string;

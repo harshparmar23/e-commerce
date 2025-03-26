@@ -14,6 +14,7 @@ import wishlistRoutes from "./routes/wishlistRoutes.js"
 import ratingRoutes from "./routes/ratingRoutes.js"
 import adminRoutes from "./routes/adminRoutes.js"
 import settingsRoutes from "./routes/settingsRoutes.js"
+import couponRoutes from "./routes/couponRoutes.js"
 import maintenanceMiddleware from "./middleware/maintenanceMiddleware.js"
 
 dotenv.config()
@@ -54,8 +55,9 @@ app.use("/api/users", userRoutes)
 app.use("/api/orders", orderRoutes)
 app.use("/api/wishlist", wishlistRoutes)
 app.use("/api/ratings", ratingRoutes)
-app.use("/api/admin", adminRoutes) // Add admin routes
-app.use("/api/settings", settingsRoutes) // Add settings routes
+app.use("/api/admin", adminRoutes)
+app.use("/api/settings", settingsRoutes)
+app.use("/api/coupons", couponRoutes) // Add coupon routes
 
 app.listen(5000, () => console.log("Server running on port 5000"))
 

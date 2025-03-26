@@ -1,8 +1,7 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useSettings } from "../context/SettingsContext";
 import {
   Heart,
   ShoppingCart,
@@ -37,6 +36,7 @@ const Wishlist = () => {
     type: "success" | "error";
   } | null>(null);
   const navigate = useNavigate();
+  const { settings } = useSettings();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -252,7 +252,8 @@ const Wishlist = () => {
 
                     <div className="mt-auto">
                       <p className="text-lg font-bold text-gray-900 mb-1">
-                        ₹{item.productId.price.toLocaleString()}
+                        {settings.currencySymbol}
+                        {item.productId.price.toLocaleString()}
                       </p>
                       <p
                         className={`text-xs font-medium mb-2 ${

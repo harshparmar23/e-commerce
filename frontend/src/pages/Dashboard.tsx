@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import axios from "axios";
 import Cookies from "js-cookie";
@@ -310,7 +308,10 @@ export default function Dashboard() {
                     <User className="h-5 w-5 text-gray-500 mr-3" />
                     <span>Personal Information</span>
                   </div>
-                  <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                  <button
+                    onClick={() => navigate("/profile-settings")}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  >
                     Edit
                   </button>
                 </div>
@@ -320,7 +321,10 @@ export default function Dashboard() {
                     <Settings className="h-5 w-5 text-gray-500 mr-3" />
                     <span>Password & Security</span>
                   </div>
-                  <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                  <button
+                    onClick={() => navigate("/profile-settings")}
+                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  >
                     Manage
                   </button>
                 </div>

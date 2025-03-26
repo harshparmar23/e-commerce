@@ -1,5 +1,4 @@
 // Create a new component for cart items
-"use client";
 
 import { Minus, Plus, Trash2 } from "lucide-react";
 

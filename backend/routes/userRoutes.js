@@ -167,5 +167,78 @@ router.delete("/:userId/address/:addressId", authMiddleware, async (req, res) =>
     }
 })
 
+// Add these new routes after the existing routes
+
+// Update user profile
+router.put("/profile", authMiddleware, async (req, res) => {
+    try {
+        const { name, email } = req.body
+
+        // Validate required fields
+        if (!name || !email) {
+            return res.status(400).json({ error: "Name and email are required" })
+        }
+
+        // Check if email is already in use by another user
+        const existingUser = await User.findOne({ email, _id: { $ne: req.userId } })
+        if (existingUser) {
+            return res.status(400).json({ error: "Email is already in use" })
+        }
+
+        // Update user profile
+        const updatedUser = await User.findByIdAndUpdate(req.userId, { name, email }, { new: true }).select("-password")
+
+        if (!updatedUser) {
+            return res.status(404).json({ error: "User not found" })
+        }
+
+        res.json(updatedUser)
+    } catch (error) {
+        console.error("Error updating profile:", error)
+        res.status(500).json({ error: "Server error" })
+    }
+})
+
+// Update user password
+router.put("/password", authMiddleware, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body
+
+        // Validate required fields
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: "Current password and new password are required" })
+        }
+
+        // Validate new password length
+        if (newPassword.length < 6) {
+            return res.status(400).json({ error: "New password must be at least 6 characters long" })
+        }
+
+        // Get user with password
+        const user = await User.findById(req.userId)
+        if (!user) {
+            return res.status(404).json({ error: "User not found" })
+        }
+
+        // Check if current password is correct
+        const bcrypt = await import("bcryptjs")
+        const isMatch = await bcrypt.compare(currentPassword, user.password)
+        if (!isMatch) {
+            return res.status(400).json({ error: "Current password is incorrect" })
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10)
+        user.password = await bcrypt.hash(newPassword, salt)
+
+        await user.save()
+
+        res.json({ message: "Password updated successfully" })
+    } catch (error) {
+        console.error("Error updating password:", error)
+        res.status(500).json({ error: "Server error" })
+    }
+})
+
 export default router
 

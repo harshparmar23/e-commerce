@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useRef, useEffect } from "react";
 import ProductList from "../components/ProductList";
 import CategorySelector from "../components/CategorySelector";

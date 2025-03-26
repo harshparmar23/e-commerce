@@ -4,107 +4,126 @@ import Order from "../models/Order.js"
 import Cart from "../models/Cart.js"
 import User from "../models/User.js"
 import Product from "../models/Product.js"
-import Settings from "../models/Settings.js"
 import authMiddleware from "../middleware/authMiddleware.js"
+import Coupon from "../models/Coupon.js"
 
 const router = express.Router()
 
 // Create a new order
 router.post("/", authMiddleware, async (req, res) => {
     try {
-        const { addressId, isGift, giftMessage, paymentMethod = "cash_on_delivery" } = req.body
-
+        const { addressId, isGift, giftMessage, paymentMethod, couponCode } = req.body
         const userId = req.userId
 
-        // Validate user exists
+        // Find user to get address
         const user = await User.findById(userId)
         if (!user) {
             return res.status(404).json({ error: "User not found" })
         }
 
-        // Find user's cart
+        // Find address
+        const address = user.addresses.id(addressId)
+        if (!address) {
+            return res.status(404).json({ error: "Address not found" })
+        }
+
+        // Get cart
         const cart = await Cart.findOne({ userId }).populate("products.productId")
         if (!cart || cart.products.length === 0) {
             return res.status(400).json({ error: "Cart is empty" })
         }
 
-        // Find the selected address
-        const selectedAddress = user.addresses.find((addr) => addr._id.toString() === addressId)
-
-        if (!selectedAddress) {
-            return res.status(404).json({ error: "Selected address not found" })
-        }
-
-        // Get site settings for shipping calculation
-        const settings = await Settings.getSingleton()
-
-        // Check product stock and calculate total amount
-        const orderProducts = []
+        // Calculate subtotal
         let subtotal = 0
+        const orderProducts = []
 
         for (const item of cart.products) {
+            // Check if product exists and has enough stock
             const product = await Product.findById(item.productId._id)
-
             if (!product) {
-                return res.status(404).json({ error: `Product not found: ${item.productId._id}` })
+                return res.status(404).json({ error: `Product ${item.productId.name} not found` })
             }
 
             if (product.stock < item.quantity) {
                 return res.status(400).json({
-                    error: `Not enough stock for "${product.name}". Available: ${product.stock}, Requested: ${item.quantity}`,
+                    error: `Not enough stock for ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
                 })
             }
 
-            // Reduce product stock
+            // Update product stock
             product.stock -= item.quantity
             await product.save()
 
+            // Add to order products
             orderProducts.push({
-                productId: product._id,
+                productId: item.productId._id,
                 quantity: item.quantity,
-                price: product.price,
+                price: item.productId.price,
             })
 
-            subtotal += product.price * item.quantity
+            // Add to subtotal
+            subtotal += item.productId.price * item.quantity
         }
 
-        // Calculate shipping fee based on free shipping threshold
-        let shippingFee = 0
-        if (subtotal < settings.freeShippingThreshold) {
-            shippingFee = settings.shippingFee
+        // Apply coupon if provided
+        let discountAmount = 0
+        let couponData = null
+
+        if (couponCode) {
+            const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() })
+
+            if (!coupon) {
+                return res.status(404).json({ error: "Invalid coupon code" })
+            }
+
+            // Validate coupon
+            const validationResult = coupon.isValid(subtotal)
+            if (!validationResult.valid) {
+                return res.status(400).json({ error: validationResult.message })
+            }
+
+            // Calculate discount
+            discountAmount = coupon.calculateDiscount(subtotal)
+
+            // Update coupon usage count
+            coupon.usedCount += 1
+            await coupon.save()
+
+            couponData = {
+                code: coupon.code,
+                discountAmount,
+            }
         }
 
-        // Calculate total amount including shipping
-        const totalAmount = subtotal + shippingFee
+        // Calculate total amount
+        const totalAmount = subtotal - discountAmount
 
-        // Create new order
-        const newOrder = new Order({
+        // Create order
+        const order = new Order({
             userId,
             products: orderProducts,
             shippingAddress: {
-                street: selectedAddress.street,
-                city: selectedAddress.city,
-                state: selectedAddress.state,
-                country: selectedAddress.country,
-                zipCode: selectedAddress.zipCode,
+                street: address.street,
+                city: address.city,
+                state: address.state,
+                country: address.country,
+                zipCode: address.zipCode,
             },
             subtotal,
-            shippingFee,
+            coupon: couponData,
             totalAmount,
             isGift: isGift || false,
             giftMessage: giftMessage || "",
-            paymentMethod,
+            paymentMethod: paymentMethod || "cash_on_delivery",
         })
 
-        await newOrder.save()
+        await order.save()
 
-        // Clear the user's cart
-        await Cart.findOneAndUpdate({ userId }, { $set: { products: [] } })
+        // Clear cart
+        cart.products = []
+        await cart.save()
 
-        res.status(201).json({
-            message: "Order created successfully",
-            orderId: newOrder._id,
-        })
+        res.status(201).json(order)
     } catch (error) {
         console.error("Error creating order:", error)
         res.status(500).json({ error: "Failed to create order" })

@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -10,12 +8,13 @@ import {
   Minus,
   Trash2,
   Gift,
-  ChevronRight,
   AlertCircle,
   Check,
 } from "lucide-react";
 import Cookies from "js-cookie";
 import { useSettings } from "../context/SettingsContext";
+import CouponForm from "../components/CouponForm";
+import OrderSummary from "../components/OrderSummary";
 
 interface Product {
   _id: string;
@@ -46,6 +45,11 @@ interface User {
   addresses: Address[];
 }
 
+interface AppliedCoupon {
+  code: string;
+  discountAmount: number;
+}
+
 const Cart = () => {
   const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
@@ -67,6 +71,9 @@ const Cart = () => {
     country: "",
     zipCode: "",
   });
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(
+    null
+  );
 
   const { settings } = useSettings();
 
@@ -258,6 +265,34 @@ const Cart = () => {
     }
   };
 
+  // Update the handleApplyCoupon function name to handleValidateCoupon
+  const handleValidateCoupon = (couponData: {
+    code: string;
+    discountAmount: number;
+    finalAmount: number;
+  }) => {
+    setAppliedCoupon({
+      code: couponData.code,
+      discountAmount: couponData.discountAmount,
+    });
+
+    // Show success message
+    setSuccessMessage(
+      `Coupon ${couponData.code} validated successfully! Will be applied at checkout.`
+    );
+    setTimeout(() => setSuccessMessage(null), 3000);
+
+    // Clear any error messages
+    setErrorMessage(null);
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setSuccessMessage("Coupon removed.");
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
+  // Update the handleCheckout function to apply the coupon during checkout
   const handleCheckout = async () => {
     if (!selectedAddress) {
       setErrorMessage("Please select or add an address before checkout.");
@@ -317,14 +352,33 @@ const Cart = () => {
 
       const token = Cookies.get("token");
 
+      // Include coupon code in the order if applied
+      const orderData = {
+        addressId: selectedAddress,
+        isGift,
+        giftMessage: isGift ? giftMessage : "",
+        paymentMethod,
+        couponCode: appliedCoupon ? appliedCoupon.code : undefined,
+      };
+
+      // If there's a coupon, apply it now during checkout
+      if (appliedCoupon) {
+        try {
+          // Update coupon usage count
+          await axios.post(
+            `${import.meta.env.VITE_BASIC_API_URL}/coupons/apply`,
+            { code: appliedCoupon.code },
+            { withCredentials: true }
+          );
+        } catch (couponErr) {
+          console.error("Error applying coupon during checkout:", couponErr);
+          // Continue with checkout even if coupon application fails
+        }
+      }
+
       await axios.post(
         `${import.meta.env.VITE_BASIC_API_URL}/orders`,
-        {
-          addressId: selectedAddress,
-          isGift,
-          giftMessage: isGift ? giftMessage : "",
-          paymentMethod,
-        },
+        orderData,
         {
           withCredentials: true,
           headers: {
@@ -335,8 +389,9 @@ const Cart = () => {
 
       setSuccessMessage("Order placed successfully!");
 
-      // Clear the cart after successful order
+      // Clear the cart and coupon after successful order
       setCartItems([]);
+      setAppliedCoupon(null);
 
       // Redirect to orders page after a short delay
       setTimeout(() => {
@@ -363,8 +418,15 @@ const Cart = () => {
   const shippingFee =
     subtotal < settings.freeShippingThreshold ? settings.shippingFee : 0;
 
-  // Calculate total cost including shipping
-  const totalCost = subtotal + shippingFee;
+  // Calculate discount amount if coupon is applied
+  const discountAmount = appliedCoupon ? appliedCoupon.discountAmount : 0;
+
+  // Calculate tax amount
+  const taxRate = 0.08; // 8% tax rate
+  const taxAmount = subtotal * taxRate;
+
+  // Calculate total cost including shipping, tax, and discount
+  const total = subtotal + shippingFee + taxAmount - discountAmount;
 
   if (!user)
     return (
@@ -373,6 +435,8 @@ const Cart = () => {
       </div>
     );
 
+  // Update the JSX to implement independent scrolling and reorder components
+  // Replace the grid layout with the following:
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="pt-24 px-4 sm:px-6 lg:px-8 pb-8 max-w-7xl mx-auto">
@@ -419,76 +483,78 @@ const Cart = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Cart Items */}
+            {/* Cart Items - Left Column with independent scrolling */}
             <div className="lg:col-span-2">
               <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-                <div className="p-6 border-b">
+                <div className="p-6 border-b sticky top-0 bg-white z-10">
                   <h2 className="text-xl font-semibold">
                     Cart Items ({cartItems.length})
                   </h2>
                 </div>
-                <div className="divide-y max-h-[calc(100vh-300px)] overflow-y-auto">
-                  {cartItems.map(({ productId, quantity }) => (
-                    <div
-                      key={productId._id}
-                      className="p-6 flex flex-col sm:flex-row"
-                    >
-                      <div className="flex-shrink-0 mb-4 sm:mb-0 sm:mr-6">
-                        <img
-                          src={productId.imageUrl || "/placeholder.svg"}
-                          alt={productId.name}
-                          className="w-24 h-24 object-cover rounded-md"
-                        />
-                      </div>
-                      <div className="flex-grow">
-                        <h3 className="font-medium text-lg mb-1">
-                          {productId.name}
-                        </h3>
-                        <p className="text-gray-600 mb-4">
-                          {settings.currencySymbol}
-                          {productId.price.toFixed(2)}
-                        </p>
+                <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
+                  <div className="divide-y">
+                    {cartItems.map(({ productId, quantity }) => (
+                      <div
+                        key={productId._id}
+                        className="p-6 flex flex-col sm:flex-row"
+                      >
+                        <div className="flex-shrink-0 mb-4 sm:mb-0 sm:mr-6">
+                          <img
+                            src={productId.imageUrl || "/placeholder.svg"}
+                            alt={productId.name}
+                            className="w-24 h-24 object-cover rounded-md"
+                          />
+                        </div>
+                        <div className="flex-grow">
+                          <h3 className="font-medium text-lg mb-1">
+                            {productId.name}
+                          </h3>
+                          <p className="text-gray-600 mb-4">
+                            {settings.currencySymbol}
+                            {productId.price.toFixed(2)}
+                          </p>
 
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center border rounded-md">
-                            <button
-                              className="px-3 py-1 text-gray-600 hover:bg-gray-100"
-                              onClick={() =>
-                                updateQuantity(productId._id, "decrease")
-                              }
-                            >
-                              <Minus size={16} />
-                            </button>
-                            <span className="px-4 py-1 font-medium">
-                              {quantity}
-                            </span>
-                            <button
-                              className="px-3 py-1 text-gray-600 hover:bg-gray-100"
-                              onClick={() =>
-                                updateQuantity(productId._id, "increase")
-                              }
-                            >
-                              <Plus size={16} />
-                            </button>
-                          </div>
-                          <div className="flex items-center">
-                            <p className="font-semibold mr-4">
-                              {settings.currencySymbol}
-                              {(productId.price * quantity).toFixed(2)}
-                            </p>
-                            <button
-                              className="text-red-500 hover:text-red-700"
-                              onClick={() => removeItem(productId._id)}
-                            >
-                              <Trash2 size={18} />
-                            </button>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center border rounded-md">
+                              <button
+                                className="px-3 py-1 text-gray-600 hover:bg-gray-100"
+                                onClick={() =>
+                                  updateQuantity(productId._id, "decrease")
+                                }
+                              >
+                                <Minus size={16} />
+                              </button>
+                              <span className="px-4 py-1 font-medium">
+                                {quantity}
+                              </span>
+                              <button
+                                className="px-3 py-1 text-gray-600 hover:bg-gray-100"
+                                onClick={() =>
+                                  updateQuantity(productId._id, "increase")
+                                }
+                              >
+                                <Plus size={16} />
+                              </button>
+                            </div>
+                            <div className="flex items-center">
+                              <p className="font-semibold mr-4">
+                                {settings.currencySymbol}
+                                {(productId.price * quantity).toFixed(2)}
+                              </p>
+                              <button
+                                className="text-red-500 hover:text-red-700"
+                                onClick={() => removeItem(productId._id)}
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-                <div className="p-6 bg-gray-50 flex justify-between items-center">
+                <div className="p-6 bg-gray-50 flex justify-between items-center sticky bottom-0">
                   <button
                     className="text-red-500 hover:text-red-700 flex items-center"
                     onClick={clearCart}
@@ -506,52 +572,9 @@ const Cart = () => {
               </div>
             </div>
 
-            {/* Order Summary */}
+            {/* Right Column with independent scrolling */}
             <div className="lg:col-span-1">
-              <div className="space-y-6">
-                {/* Order Summary Card */}
-                <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                  <div className="p-6 border-b">
-                    <h2 className="text-xl font-semibold">Order Summary</h2>
-                  </div>
-                  <div className="p-6 space-y-4">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Subtotal</span>
-                      <span className="font-medium">
-                        {settings.currencySymbol}
-                        {subtotal.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Shipping</span>
-                      {shippingFee > 0 ? (
-                        <span className="font-medium">
-                          {settings.currencySymbol}
-                          {shippingFee.toFixed(2)}
-                        </span>
-                      ) : (
-                        <span className="font-medium text-green-600">Free</span>
-                      )}
-                    </div>
-                    {shippingFee > 0 && (
-                      <div className="text-xs text-gray-500 italic">
-                        Add {settings.currencySymbol}
-                        {(settings.freeShippingThreshold - subtotal).toFixed(
-                          2
-                        )}{" "}
-                        more to qualify for free shipping
-                      </div>
-                    )}
-                    <div className="border-t pt-4 flex justify-between">
-                      <span className="font-semibold">Total</span>
-                      <span className="font-bold text-lg">
-                        {settings.currencySymbol}
-                        {totalCost.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
+              <div className="space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
                 {/* Shipping Address */}
                 <div className="bg-white rounded-lg shadow-md overflow-hidden">
                   <div className="p-6 border-b flex justify-between items-center">
@@ -670,18 +693,26 @@ const Cart = () => {
                   </div>
                 </div>
 
-                {/* Checkout Button */}
-                <button
-                  className="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
-                  onClick={handleCheckout}
-                  disabled={!selectedAddress || isLoading}
-                >
-                  {isLoading ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
-                  ) : null}
-                  Proceed to Checkout
-                  <ChevronRight className="ml-2" />
-                </button>
+                {/* Coupon Form */}
+                <CouponForm
+                  subtotal={subtotal}
+                  onValidateCoupon={handleValidateCoupon}
+                  onRemoveCoupon={handleRemoveCoupon}
+                  appliedCoupon={appliedCoupon}
+                />
+
+                {/* Order Summary - Moved to the bottom */}
+                <OrderSummary
+                  subtotal={subtotal}
+                  shipping={shippingFee}
+                  discount={discountAmount}
+                  tax={taxAmount}
+                  total={total}
+                  isLoading={isLoading}
+                  isCheckoutDisabled={!selectedAddress}
+                  onCheckout={handleCheckout}
+                  // couponCode={appliedCoupon?.code}
+                />
               </div>
             </div>
           </div>

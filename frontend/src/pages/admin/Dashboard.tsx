@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -15,7 +13,7 @@ import {
   XCircle,
   Truck,
 } from "lucide-react";
-import AdminSidebar from "../../components/admin/AdminSidebar";
+import AdminSidebar from "@/components/admin/AdminSidebar";
 
 interface DashboardData {
   totalUsers: number;
@@ -136,7 +134,7 @@ const AdminDashboard = () => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
-      currency: "INR",
+      currency: "USD",
       maximumFractionDigits: 0,
     }).format(amount);
   };

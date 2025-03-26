@@ -1,8 +1,7 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useSettings } from "@/context/SettingsContext";
 import {
   Package,
   Clock,
@@ -70,6 +69,7 @@ const Orders = () => {
   const [ratingInfo, setRatingInfo] = useState<RatingInfo | null>(null);
   const [ratedProducts, setRatedProducts] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
+  const { settings } = useSettings();
 
   // First fetch the current user
   useEffect(() => {
@@ -443,7 +443,8 @@ const Orders = () => {
                     <div className="md:text-right">
                       <h3 className="font-medium mb-2">Total</h3>
                       <p className="text-lg font-bold">
-                        ₹{order.totalAmount.toFixed(2)}
+                        {settings.currencySymbol}
+                        {order.totalAmount.toFixed(2)}
                       </p>
                     </div>
                   </div>
@@ -616,8 +617,9 @@ const Orders = () => {
               </div>
 
               <div className="flex justify-between items-center">
-                {(selectedOrder.status === "pending" ||
-                  selectedOrder.status === "processing") && (
+                {selectedOrder.status === "pending" && (
+                  // ||
+                  // selectedOrder.status === "processing")
                   <button
                     onClick={() => handleCancelOrder(selectedOrder._id)}
                     className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors"

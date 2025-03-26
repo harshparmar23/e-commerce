@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import AdminSidebar from "../../components/admin/AdminSidebar";
+import AdminSidebar from "@/components/admin/AdminSidebar";
 
 interface User {
   _id: string;

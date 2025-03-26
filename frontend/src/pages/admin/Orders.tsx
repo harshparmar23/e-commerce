@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -17,7 +15,8 @@ import {
   Edit,
   Trash2,
 } from "lucide-react";
-import AdminSidebar from "../../components/admin/AdminSidebar";
+import AdminSidebar from "@/components/admin/AdminSidebar";
+import { useSettings } from "@/context/SettingsContext";
 
 interface Order {
   _id: string;
@@ -74,6 +73,7 @@ const AdminOrders = () => {
     null
   );
   const navigate = useNavigate();
+  const { settings } = useSettings();
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -260,7 +260,7 @@ const AdminOrders = () => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
-      currency: "INR",
+      currency: settings.defaultCurrency,
       maximumFractionDigits: 0,
     }).format(amount);
   };
@@ -748,12 +748,14 @@ const AdminOrders = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {settings.currencySymbol}
                           {formatCurrency(item.price)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {item.quantity}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                          {settings.currencySymbol}
                           {formatCurrency(item.price * item.quantity)}
                         </td>
                       </tr>

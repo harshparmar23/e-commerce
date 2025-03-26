@@ -27,6 +27,8 @@ import AdminCategories from "./pages/admin/Categories";
 import AdminRoute from "./components/admin/AdminRoute";
 import MaintenancePage from "./pages/Maintenance";
 import { SettingsProvider, useSettings } from "./context/SettingsContext";
+import ProfileSettings from "./pages/ProfileSettings";
+import AdminCoupons from "./pages/admin/Coupons";
 
 // MaintenanceWrapper component to handle maintenance mode redirects
 const MaintenanceWrapper = ({ children }: { children: React.ReactNode }) => {
@@ -73,6 +75,7 @@ const AppRoutes = () => {
         <Route path="/orders" element={<Orders />} />
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/maintenance" element={<MaintenancePage />} />
+        <Route path="/profile-settings" element={<ProfileSettings />} />
 
         {/* Admin Routes */}
         <Route
@@ -104,6 +107,14 @@ const AppRoutes = () => {
           element={
             <AdminRoute>
               <AdminUsers />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/coupons"
+          element={
+            <AdminRoute>
+              <AdminCoupons />
             </AdminRoute>
           }
         />

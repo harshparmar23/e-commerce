@@ -1,5 +1,3 @@
-"use client";
-
 import { X, Plus } from "lucide-react";
 import ProductForm from "./ProductForm";
 

@@ -1,7 +1,6 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { useSettings } from "@/context/SettingsContext";
 
 interface Category {
   _id: string;
@@ -43,6 +42,8 @@ const ProductForm = ({
   >([]);
   const [loadingSubcategories, setLoadingSubcategories] =
     useState<boolean>(false);
+
+  const { settings } = useSettings();
 
   // Fetch subcategories when category changes
   useEffect(() => {
@@ -106,7 +107,7 @@ const ProductForm = ({
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Price (₹)
+          Price ({settings.currencySymbol})
         </label>
         <input
           type="number"
