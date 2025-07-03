@@ -62,7 +62,3 @@ npm run dev
 ## Contributing
 
 Contributions are welcome! Feel free to open issues or submit pull requests.
-
-## License
-
-Specify your license here (e.g., MIT, Apache 2.0, etc.).
