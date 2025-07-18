@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -57,6 +59,8 @@ const Navigation = () => {
     const checkAuth = async () => {
       try {
         const token = Cookies.get("token");
+        console.log("Checking auth, token present:", !!token);
+
         if (!token) {
           setIsLoggedIn(false);
           setUserName("");
@@ -76,7 +80,12 @@ const Navigation = () => {
         // Check for token refresh in response headers
         const newToken = res.headers["new-auth-token"];
         if (newToken) {
-          Cookies.set("token", newToken, { expires: 7 });
+          console.log("Refreshing token");
+          Cookies.set("token", newToken, {
+            expires: 7,
+            secure: window.location.protocol === "https:",
+            sameSite: window.location.protocol === "https:" ? "None" : "Lax",
+          });
         }
 
         setIsLoggedIn(true);
@@ -84,9 +93,10 @@ const Navigation = () => {
         fetchCartCount(res.data._id);
         fetchWishlistCount(res.data._id);
       } catch (err) {
+        console.error("Auth check failed:", err);
         setIsLoggedIn(false);
         setUserName("");
-        // If token is invalid, remove it
+        // Clear invalid tokens
         Cookies.remove("token");
         Cookies.remove("userId");
       }

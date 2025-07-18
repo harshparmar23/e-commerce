@@ -52,9 +52,15 @@ router.post("/login", async (req, res) => {
         res.cookie("token", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "None",
+            sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-            domain: process.env.NODE_ENV === "production" ? ".vercel.app" : "localhost",
+            // Remove the domain setting as it can cause issues
+        })
+
+        console.log("Login successful for user:", user._id, "Role:", user.role)
+        console.log("Cookie settings:", {
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
         })
 
         res.json({
@@ -88,4 +94,3 @@ router.get("/me", authMiddleware, async (req, res) => {
 })
 
 export default router
-

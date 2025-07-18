@@ -5,12 +5,16 @@ const authMiddleware = async (req, res, next) => {
         // Get token from cookies or Authorization header
         const token =
             req.cookies.token ||
-            (req.headers.authorization && req.headers.authorization.startsWith("Bearer")
-                ? req.headers.authorization.split(" ")[1]
-                : null)
+            (req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.split(" ")[1] : null)
 
-        // Remove excessive logging that could expose sensitive info
+        console.log("Auth check:", {
+            hasCookieToken: !!req.cookies.token,
+            hasHeaderToken: !!req.headers.authorization,
+            userId: req.userId || "Not set",
+        })
+
         if (!token) {
+            console.log("No token found in request")
             return res.status(401).json({ message: "Unauthorized: No token provided" })
         }
 
@@ -33,7 +37,7 @@ const authMiddleware = async (req, res, next) => {
                 res.cookie("token", newToken, {
                     httpOnly: true,
                     secure: process.env.NODE_ENV === "production",
-                    sameSite: "strict",
+                    sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
                     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
                 })
 
@@ -54,4 +58,3 @@ const authMiddleware = async (req, res, next) => {
 }
 
 export default authMiddleware
-
