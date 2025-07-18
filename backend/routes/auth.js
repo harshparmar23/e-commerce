@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken"
 import User from "../models/User.js"
 import authMiddleware from "../middleware/authMiddleware.js"
 import dotenv from "dotenv"
-import Settings from "../models/Settings.js" // Import Settings model
+import Settings from "../models/Settings.js"
 dotenv.config()
 
 const router = express.Router()
@@ -30,6 +30,7 @@ router.post("/signup", async (req, res) => {
 
         res.status(201).json({ message: "User created successfully" })
     } catch (error) {
+        console.error("Signup error:", error)
         res.status(500).json({ message: "Error creating user" })
     }
 })
@@ -49,46 +50,66 @@ router.post("/login", async (req, res) => {
         const token = jwt.sign({ userId: user._id, role: user.role }, JWT_SECRET, { expiresIn: "7d" })
         console.log("Token generated for user:", user._id)
 
+        // Set cookie with proper configuration
         res.cookie("token", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-            // Remove the domain setting as it can cause issues
+            path: "/",
         })
 
         console.log("Login successful for user:", user._id, "Role:", user.role)
-        console.log("Cookie settings:", {
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
-        })
 
         res.json({
             message: "Login successful",
             userId: user._id,
             role: user.role,
-            token: token, // Send token in response for client-side storage
+            name: user.name,
+            token: token,
         })
     } catch (error) {
-        console.log(error)
+        console.error("Login error:", error)
         res.status(500).json({ message: "Error logging in" })
     }
 })
 
 // Logout Route
 router.post("/logout", (req, res) => {
-    res.cookie("token", "", { expires: new Date(0) })
-    res.json({ message: "Logged out successfully" })
+    console.log("Logout request received")
+
+    // Clear the cookie with all possible configurations to ensure it's removed
+    const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+        expires: new Date(0),
+        maxAge: 0,
+        path: "/",
+    }
+
+    res.cookie("token", "", cookieOptions)
+
+    // Also try clearing without httpOnly for client-side cleanup
+    res.cookie("token", "", {
+        expires: new Date(0),
+        maxAge: 0,
+        path: "/",
+    })
+
+    console.log("Logout successful, cookies cleared")
+    res.json({ message: "Logged out successfully", success: true })
 })
 
 // Get Current User
 router.get("/me", authMiddleware, async (req, res) => {
     try {
-        const user = await User.findById(req.userId).select("-password") // Exclude password
+        const user = await User.findById(req.userId).select("-password")
         if (!user) return res.status(404).json({ message: "User not found" })
 
         res.json(user)
     } catch (error) {
+        console.error("Get user error:", error)
         res.status(500).json({ message: "Error fetching user details" })
     }
 })

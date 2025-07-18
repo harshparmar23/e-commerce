@@ -7,10 +7,11 @@ const authMiddleware = async (req, res, next) => {
             req.cookies.token ||
             (req.headers.authorization?.startsWith("Bearer ") ? req.headers.authorization.split(" ")[1] : null)
 
-        console.log("Auth check:", {
+        console.log("Auth middleware check:", {
             hasCookieToken: !!req.cookies.token,
             hasHeaderToken: !!req.headers.authorization,
-            userId: req.userId || "Not set",
+            path: req.path,
+            method: req.method,
         })
 
         if (!token) {
@@ -20,6 +21,7 @@ const authMiddleware = async (req, res, next) => {
 
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET)
+            console.log("Token verified for user:", decoded.userId)
 
             // Store userId in request
             req.userId = decoded.userId
@@ -28,6 +30,7 @@ const authMiddleware = async (req, res, next) => {
             // Check if token is about to expire (if it expires in less than 1 day)
             const currentTime = Math.floor(Date.now() / 1000)
             if (decoded.exp - currentTime < 86400) {
+                console.log("Token expiring soon, refreshing...")
                 // Create a new token with extended expiration
                 const newToken = jwt.sign({ userId: decoded.userId, role: decoded.role }, process.env.JWT_SECRET, {
                     expiresIn: "7d",
@@ -39,6 +42,7 @@ const authMiddleware = async (req, res, next) => {
                     secure: process.env.NODE_ENV === "production",
                     sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
                     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+                    path: "/",
                 })
 
                 if (req.headers.authorization) {

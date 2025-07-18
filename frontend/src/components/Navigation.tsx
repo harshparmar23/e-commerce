@@ -25,6 +25,7 @@ const Navigation = () => {
   const [cartCount, setCartCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [scrolled, setScrolled] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
   const { settings, isAdmin } = useSettings();
@@ -55,15 +56,21 @@ const Navigation = () => {
     };
   }, []);
 
+  // Authentication check effect
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        setIsLoading(true);
         const token = Cookies.get("token");
-        console.log("Checking auth, token present:", !!token);
+        console.log("Navigation auth check, token present:", !!token);
 
         if (!token) {
+          console.log("No token found, setting logged out state");
           setIsLoggedIn(false);
           setUserName("");
+          setCartCount(0);
+          setWishlistCount(0);
+          setIsLoading(false);
           return;
         }
 
@@ -85,34 +92,42 @@ const Navigation = () => {
             expires: 7,
             secure: window.location.protocol === "https:",
             sameSite: window.location.protocol === "https:" ? "None" : "Lax",
+            path: "/",
           });
         }
 
+        console.log("Auth successful, user:", res.data.name);
         setIsLoggedIn(true);
         setUserName(res.data.name);
-        fetchCartCount(res.data._id);
-        fetchWishlistCount(res.data._id);
+
+        // Fetch counts after successful auth
+        await Promise.all([
+          fetchCartCount(res.data._id),
+          fetchWishlistCount(res.data._id),
+        ]);
       } catch (err) {
         console.error("Auth check failed:", err);
+        // Clear all authentication state
         setIsLoggedIn(false);
         setUserName("");
+        setCartCount(0);
+        setWishlistCount(0);
         // Clear invalid tokens
         Cookies.remove("token");
         Cookies.remove("userId");
+      } finally {
+        setIsLoading(false);
       }
     };
 
     checkAuth();
-
-    // Set up interval to periodically check auth status (every 5 minutes)
-    const authInterval = setInterval(checkAuth, 5 * 60 * 1000);
-
-    return () => clearInterval(authInterval);
   }, [location.pathname]); // Re-check when route changes
 
   const fetchCartCount = async (userId: string) => {
     try {
       const token = Cookies.get("token");
+      if (!token) return;
+
       const { data } = await axios.get(
         `${import.meta.env.VITE_BASIC_API_URL}/cart/${userId}`,
         {
@@ -121,15 +136,18 @@ const Navigation = () => {
           },
         }
       );
-      setCartCount(data.products.length);
+      setCartCount(data.products?.length || 0);
     } catch (error) {
       console.error("Error fetching cart count:", error);
+      setCartCount(0);
     }
   };
 
   const fetchWishlistCount = async (userId: string) => {
     try {
       const token = Cookies.get("token");
+      if (!token) return;
+
       const { data } = await axios.get(
         `${import.meta.env.VITE_BASIC_API_URL}/wishlist/${userId}`,
         {
@@ -141,29 +159,62 @@ const Navigation = () => {
       setWishlistCount(data.products?.length || 0);
     } catch (error) {
       console.error("Error fetching wishlist count:", error);
+      setWishlistCount(0);
     }
   };
 
   const handleLogout = async () => {
     try {
-      await axios.post(
-        `${import.meta.env.VITE_BASIC_API_URL}/auth/logout`,
-        {},
-        {
-          withCredentials: true,
-        }
-      );
+      console.log("Starting logout process...");
+
+      // Immediately update UI state
+      setIsLoggedIn(false);
+      setUserName("");
+      setCartCount(0);
+      setWishlistCount(0);
+      setIsProfileOpen(false);
+      setIsMenuOpen(false);
+
+      // Remove cookies immediately
+      Cookies.remove("token", { path: "/" });
+      Cookies.remove("userId", { path: "/" });
+
+      // Also try removing without path
       Cookies.remove("token");
       Cookies.remove("userId");
-      setIsLoggedIn(false);
-      navigate("/login");
+
+      try {
+        // Call backend logout
+        const response = await axios.post(
+          `${import.meta.env.VITE_BASIC_API_URL}/auth/logout`,
+          {},
+          {
+            withCredentials: true,
+          }
+        );
+        console.log("Backend logout response:", response.data);
+      } catch (backendError) {
+        console.error("Backend logout failed, but continuing:", backendError);
+      }
+
+      console.log("Logout complete, redirecting to login");
+      navigate("/login", { replace: true });
+
+      // Force a page reload to ensure clean state
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     } catch (err) {
-      console.error("Logout failed", err);
-      // Even if the server logout fails, remove cookies on client side
+      console.error("Logout process failed:", err);
+      // Force cleanup even if everything fails
+      setIsLoggedIn(false);
+      setUserName("");
+      setCartCount(0);
+      setWishlistCount(0);
       Cookies.remove("token");
       Cookies.remove("userId");
-      setIsLoggedIn(false);
-      navigate("/login");
+      navigate("/login", { replace: true });
+      window.location.reload();
     }
   };
 
@@ -173,6 +224,27 @@ const Navigation = () => {
 
   if (!renderNavbar) {
     return null;
+  }
+
+  // Show loading state briefly
+  if (isLoading) {
+    return (
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16 items-center">
+            <div className="flex items-center">
+              <ShoppingBag className="h-8 w-8 text-blue-600" />
+              <span className="ml-2 text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                {settings.siteName}
+              </span>
+            </div>
+            <div className="animate-pulse">
+              <div className="h-8 w-20 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
   }
 
   return (
@@ -289,10 +361,7 @@ const Navigation = () => {
                       </Link>
                     )}
                     <button
-                      onClick={() => {
-                        handleLogout();
-                        setIsProfileOpen(false);
-                      }}
+                      onClick={handleLogout}
                       className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50"
                     >
                       <LogOut className="inline-block mr-2 h-4 w-4" />
@@ -472,10 +541,7 @@ const Navigation = () => {
                   </Link>
                 )}
                 <button
-                  onClick={() => {
-                    handleLogout();
-                    toggleMenu();
-                  }}
+                  onClick={handleLogout}
                   className="block w-full text-left pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-red-600 hover:bg-red-50 hover:border-red-300"
                 >
                   <div className="flex items-center">

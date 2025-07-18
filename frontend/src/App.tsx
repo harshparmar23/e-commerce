@@ -1,3 +1,5 @@
+"use client";
+
 import type React from "react";
 
 import {
@@ -23,7 +25,6 @@ import AdminOrders from "./pages/admin/Orders";
 import AdminSettings from "./pages/admin/Settings";
 import MaintenancePage from "./pages/Maintenance";
 import { SettingsProvider, useSettings } from "./context/SettingsContext";
-// Add the import for ProfileSettings
 import ProfileSettings from "./pages/ProfileSettings";
 import Coupons from "./pages/admin/Coupons";
 
@@ -37,6 +38,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
       try {
         const token = Cookies.get("token");
         if (!token) {
+          console.log("No token for admin check");
           setIsAdmin(false);
           setLoading(false);
           return;
@@ -51,9 +53,15 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
             },
           }
         );
+
+        console.log("Admin check result:", res.data.role);
         setIsAdmin(res.data.role === "admin");
       } catch (err) {
+        console.error("Admin check failed:", err);
         setIsAdmin(false);
+        // Clear invalid tokens
+        Cookies.remove("token");
+        Cookies.remove("userId");
       } finally {
         setLoading(false);
       }
@@ -84,7 +92,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     const checkAuth = async () => {
       try {
         const token = Cookies.get("token");
+        console.log("ProtectedRoute auth check, token present:", !!token);
+
         if (!token) {
+          console.log("No token in ProtectedRoute, redirecting to login");
           setIsAuthenticated(false);
           setLoading(false);
           return;
@@ -103,19 +114,29 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         // Check for token refresh in response headers
         const newToken = res.headers["new-auth-token"];
         if (newToken) {
-          Cookies.set("token", newToken, { expires: 7 });
+          Cookies.set("token", newToken, {
+            expires: 7,
+            path: "/",
+            secure: window.location.protocol === "https:",
+            sameSite: window.location.protocol === "https:" ? "None" : "Lax",
+          });
         }
 
+        console.log("ProtectedRoute auth successful");
         setIsAuthenticated(true);
       } catch (err) {
+        console.error("ProtectedRoute auth failed:", err);
         setIsAuthenticated(false);
+        // Clear invalid tokens
+        Cookies.remove("token");
+        Cookies.remove("userId");
       } finally {
         setLoading(false);
       }
     };
 
     checkAuth();
-  }, []);
+  }, [location.pathname]);
 
   if (loading) {
     return (
@@ -226,7 +247,6 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      {/* Add this inside the Routes component, with the other protected routes */}
       <Route
         path="/profile-settings"
         element={
