@@ -86,7 +86,7 @@ const AuthForm = ({ type }: { type: "login" | "signup" }) => {
           </h1>
           <p className="mt-2 text-gray-600">
             {type === "login"
-              ? "Sign in to access your account"
+              ? "Sign in to access your account(Admin cred are placeholder)"
               : "Join us and start shopping today"}
           </p>
         </div>
@@ -148,7 +148,7 @@ const AuthForm = ({ type }: { type: "login" | "signup" }) => {
                   },
                 })}
                 className="pl-10 block w-full rounded-lg border border-gray-300 py-3 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="you@example.com"
+                placeholder="admin@admin.com"
               />
             </div>
             {errors.email && (
@@ -180,7 +180,7 @@ const AuthForm = ({ type }: { type: "login" | "signup" }) => {
                   // },
                 })}
                 className="pl-10 pr-10 block w-full rounded-lg border border-gray-300 py-3 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="••••••••"
+                placeholder="123456"
               />
               <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
                 <button
