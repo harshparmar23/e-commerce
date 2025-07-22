@@ -133,14 +133,6 @@ const AdminDashboard = () => {
     orderStatusDistribution,
   } = dashboardData;
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
