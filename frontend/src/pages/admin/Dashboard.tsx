@@ -14,6 +14,7 @@ import {
   Truck,
 } from "lucide-react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
+import { useSettings } from "@/context/SettingsContext";
 
 interface DashboardData {
   totalUsers: number;
@@ -33,6 +34,7 @@ interface DashboardData {
 }
 
 const AdminDashboard = () => {
+  const { settings } = useSettings();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(
     null
   );
@@ -224,7 +226,8 @@ const AdminDashboard = () => {
               <div>
                 <p className="text-sm text-gray-500">Total Revenue</p>
                 <h3 className="text-2xl font-bold">
-                  {formatCurrency(totalRevenue)}
+                  {settings.currencySymbol}
+                  {totalRevenue}
                 </h3>
               </div>
             </div>
@@ -427,7 +430,8 @@ const AdminDashboard = () => {
                             </span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                            {formatCurrency(product.price)}
+                            {settings.currencySymbol}
+                            {product.price}
                           </td>
                         </tr>
                       ))}
@@ -505,7 +509,8 @@ const AdminDashboard = () => {
                           </div>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                          {formatCurrency(order.totalAmount)}
+                          {settings.currencySymbol}
+                          {order.totalAmount}
                         </td>
                       </tr>
                     ))}

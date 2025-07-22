@@ -5,6 +5,7 @@ import axios from "axios";
 import AdminLayout from "@/layouts/AdminLayout";
 import Pagination from "@/components/admin/Pagination";
 import { Edit, Trash2, Plus, X } from "lucide-react";
+import { useSettings } from "@/context/SettingsContext";
 
 interface Coupon {
   _id: string;
@@ -20,6 +21,7 @@ interface Coupon {
 }
 
 const Coupons = () => {
+  const { settings } = useSettings();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -264,7 +266,7 @@ const Coupons = () => {
                             ? `${coupon.discountAmount}%`
                             : coupon.discountType === "dynamic"
                             ? "Dynamic"
-                            : `$${coupon.discountAmount}`}
+                            : `${settings.currencySymbol}${coupon.discountAmount}`}
                         </td>
                         <td className="py-3 px-6 text-left">
                           ${coupon.minimumAmount}
