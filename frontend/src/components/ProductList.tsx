@@ -283,49 +283,50 @@ export default function ProductList({
    * Fetch Products
    */
   useEffect(() => {
-    const controller = new AbortController();
     const fetchProducts = async () => {
+      setReloading(true);
       setError(null);
-      setReloading(!initialLoading);
+
       try {
         const queryParams = new URLSearchParams();
         if (searchQuery) queryParams.append("searchQuery", searchQuery);
         if (sortOrder) queryParams.append("sortOrder", sortOrder);
         if (showBestsellers) queryParams.append("bestsellers", "true");
         if (showNewArrivals) queryParams.append("newArrivals", "true");
-        if (selectedMajorCategories.length > 0)
+        if (selectedMajorCategories.length > 0) {
           queryParams.append(
             "majorCategories",
             selectedMajorCategories.join(",")
           );
-        if (selectedSubCategories.length > 0)
-          queryParams.append("subCategories", selectedSubCategories.join(","));
-
-        const res = await axios.get(
-          `${
-            import.meta.env.VITE_BASIC_API_URL
-          }/products?${queryParams.toString()}`,
-          { signal: controller.signal }
-        );
-        setProducts(res.data);
-      } catch (e) {
-        if (!(e instanceof DOMException && e.name === "AbortError")) {
-          console.error("Error fetching products:", e);
-          setError(
-            axios.isAxiosError(e)
-              ? e.response?.data?.message ||
-                  "Failed to fetch products. Please try again."
-              : "Failed to fetch products. Please try again."
-          );
         }
+        if (selectedSubCategories.length > 0) {
+          queryParams.append("subCategories", selectedSubCategories.join(","));
+        }
+
+        const base = import.meta.env.VITE_BASIC_API_URL;
+        if (!base) {
+          console.warn("[ProductList] VITE_BASIC_API_URL is undefined!");
+        }
+
+        const fullUrl = `${base}/products?${queryParams.toString()}`;
+        console.log("[ProductList] Fetching:", fullUrl);
+
+        const res = await axios.get(fullUrl);
+        console.log("[ProductList] Response:", res.status, res.data);
+        setProducts(res.data);
+      } catch (err: any) {
+        console.error("[ProductList] Fetch error:", err?.response || err);
+        setError(
+          err?.response?.data?.message ||
+            err?.message ||
+            "Failed to fetch products"
+        );
       } finally {
-        setInitialLoading(false);
         setReloading(false);
       }
     };
 
     fetchProducts();
-    return () => controller.abort();
   }, [
     searchQuery,
     sortOrder,
@@ -333,7 +334,6 @@ export default function ProductList({
     showNewArrivals,
     selectedMajorCategories,
     selectedSubCategories,
-    initialLoading,
   ]);
 
   /**
