@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios, { AxiosError } from "axios";
 import {
   Star,
@@ -610,7 +610,6 @@ export default function ProductList({
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {products.map((product) => {
           const wishlisted = wishlist.includes(product._id);
-          const inCartCount = cartItems[product._id];
           const lowStock = product.stock > 0 && product.stock < 5;
           const newArrival = isNewArrival(product.createdAt);
           const out = product.stock === 0;
