@@ -200,6 +200,7 @@ export default function ProductList({
 
   const navigate = useNavigate();
   const { settings } = useSettings();
+  setInitialLoading(true);
 
   /**
    * Authentication check
