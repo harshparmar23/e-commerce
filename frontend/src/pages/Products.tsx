@@ -17,25 +17,6 @@ import {
 import ProductList from "../components/ProductList";
 import CategorySelector from "../components/CategorySelector";
 
-/**
- * Products Page (Top Filter Overlay with Navbar Offset)
- *
- * Change requested:
- *  - There is already a global navbar at the top. Reserve (keep empty) the space that navbar occupies,
- *    so the filter bar sits just UNDER the navbar (no overlap) and products scroll behind filter area.
- *
- * Implementation details:
- *  - Introduced NAVBAR_HEIGHT constant (change to match your navbar height) or use CSS variable (--navbar-height).
- *  - Filter bar uses 'top: var(--navbar-height, <fallback>)' so if you define --navbar-height on :root it auto-adapts.
- *  - Added a spacer div with height equal to navbar height so initial content isn't hidden.
- *  - Products container top padding reduced: was pt-32; now dynamic based on (NAVBAR_HEIGHT + FILTER_BAR_HEIGHT).
- *    For simplicity we keep a spacer + filter bar height offset (FILTER_BAR_APPROX).
- *
- * To customize:
- *  - Adjust NAVBAR_HEIGHT value OR define :root { --navbar-height: 64px; } in global CSS.
- *  - If your filter bar height changes drastically, tweak FILTER_BAR_APPROX.
- */
-
 interface CategorySelection {
   id: string;
   name: string;
@@ -785,26 +766,3 @@ export default function Products() {
     </div>
   );
 }
-
-/*
-Add / ensure these global styles or Tailwind config entries:
-
-@keyframes fadeIn {
-  from { opacity:0 }
-  to { opacity:1 }
-}
-@keyframes slideUp {
-  from { transform:translateY(100%); }
-  to { transform:translateY(0); }
-}
-@keyframes popIn {
-  0% { opacity:0; transform:scale(.96) translateY(4px); }
-  100% { opacity:1; transform:scale(1) translateY(0); }
-}
-
-:root {
-  --navbar-height: 64px; // adjust to your real navbar height
-}
-
-You can remove FILTER_BAR_APPROX if you compute dynamic heights with refs, but a static approximation is simpler.
-*/
